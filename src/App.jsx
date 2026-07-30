@@ -8,6 +8,7 @@ import ExpenseModal from './components/ExpenseModal';
 import FundModal from './components/FundModal';
 import FundHistoryModal from './components/FundHistoryModal';
 import PreTripPlanner from './components/PreTripPlanner';
+import CalculatorWidget from './components/CalculatorWidget';
 import { expenseApi } from './api/expenseApi';
 import { Users, TrendingUp, ArrowRight } from 'lucide-react';
 
@@ -202,6 +203,9 @@ export default function App() {
         initialFilter={fundHistoryFilter}
         onDeleteFundSuccess={loadData}
       />
+
+      {/* Floating On-Spot Calculator Widget */}
+      <CalculatorWidget />
     </div>
   );
 }
