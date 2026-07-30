@@ -230,7 +230,7 @@ export default function AuthScreens({ onAuthSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-bold text-sm shadow-glow-cyan flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                className="w-full py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
               >
                 <LogIn className="w-4 h-4" />
                 {loading ? 'Signing in...' : 'Sign In'}
@@ -304,7 +304,7 @@ export default function AuthScreens({ onAuthSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm shadow-glow-violet flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                className="w-full py-2.5 rounded-xl btn-premium btn-violet text-sm shadow-glow-violet flex items-center justify-center gap-2 transition-all"
               >
                 <UserPlus className="w-4 h-4" />
                 {loading ? 'Creating Account...' : 'Sign Up'}
@@ -346,7 +346,7 @@ export default function AuthScreens({ onAuthSuccess }) {
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invite Group Members (Usernames)</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invite Group Members (Usernames or Emails)</label>
                   <button
                     type="button"
                     onClick={addMemberField}
@@ -361,7 +361,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                     <div key={idx} className="flex gap-2 items-center">
                       <input
                         type="text"
-                        placeholder={`Member ${idx + 1} Username (e.g. Sai)`}
+                        placeholder={`Member ${idx + 1} Username or Email (e.g. Sai or sai@example.com)`}
                         value={member}
                         onChange={(e) => handleMemberChange(idx, e.target.value)}
                         className="flex-1 glass-input rounded-xl px-3 py-2 text-xs"
@@ -381,7 +381,7 @@ export default function AuthScreens({ onAuthSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-bold text-sm shadow-glow-cyan flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                className="w-full py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
               >
                 <PlusCircle className="w-4 h-4" />
                 {loading ? 'Creating Trip...' : 'Create Trip & Dashboard'}
@@ -390,8 +390,8 @@ export default function AuthScreens({ onAuthSuccess }) {
           )}
 
           {screen === 'selectGroup' && (() => {
-            const adminTrips = availableGroups.filter((g) => g.isCreator);
-            const memberTrips = availableGroups.filter((g) => !g.isCreator);
+            const adminTrips = availableGroups.filter((g) => g.isCreator || g.creator);
+            const memberTrips = availableGroups.filter((g) => !g.isCreator && !g.creator);
 
             return (
               <motion.div
@@ -472,7 +472,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                       setMembers(['']);
                       setScreen('setupGroup');
                     }}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-bold text-sm shadow-glow-cyan flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                    className="w-full py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Start a New Trip Group (As Admin)

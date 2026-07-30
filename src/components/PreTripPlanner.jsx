@@ -224,7 +224,7 @@ export default function PreTripPlanner({ onBack }) {
         </div>
         <button
           onClick={onBack}
-          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-2 border border-white/10 transition-all hover:scale-105"
+          className="px-4 py-2 rounded-xl btn-premium btn-secondary text-xs transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
@@ -276,7 +276,7 @@ export default function PreTripPlanner({ onBack }) {
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                  className="w-full py-2 rounded-xl btn-premium btn-violet text-xs flex items-center justify-center gap-1.5 transition-all"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Add Member
@@ -458,14 +458,14 @@ export default function PreTripPlanner({ onBack }) {
                           notes: ''
                         });
                       }}
-                      className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+                      className="flex-1 py-2.5 rounded-xl btn-premium btn-secondary text-xs transition-all"
                     >
                       Cancel Edit
                     </button>
                   )}
                   <button
                     type="submit"
-                    className="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-glow-cyan"
+                    className="flex-grow py-2.5 rounded-xl btn-premium btn-cyan text-xs shadow-glow-cyan transition-all"
                   >
                     {editingExpenseId ? 'Update Booking' : 'Log Booking'}
                   </button>

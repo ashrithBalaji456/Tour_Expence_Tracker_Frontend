@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Compass, Sparkles, PlusCircle, Plane, LogOut, User } from 'lucide-react';
+import { Compass, Sparkles, PlusCircle, Plane, LogOut, User, Wallet, History } from 'lucide-react';
 
-export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onLogout, onSwitchTrip }) {
+export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onLogout, onSwitchTrip, onOpenFundModal, onOpenFundHistory }) {
   const username = localStorage.getItem('username') || 'User';
   const groupName = summary?.groupName || 'Trip Cash Tracker';
   const isReadOnly = summary?.isReadOnly || false;
@@ -31,7 +31,7 @@ export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onL
         <div className="flex items-center gap-2">
           <button
             onClick={onSwitchTrip}
-            className="p-2 rounded-xl bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 transition-all flex items-center gap-1.5 text-xs font-bold border border-white/5"
+            className="px-3 py-1.5 rounded-xl btn-premium btn-secondary text-xs"
             title="Switch Active Trip"
           >
             <Compass className="w-3.5 h-3.5" />
@@ -39,7 +39,7 @@ export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onL
           </button>
           <button
             onClick={onLogout}
-            className="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all flex items-center gap-1.5 text-xs font-bold border border-white/5"
+            className="px-3 py-1.5 rounded-xl btn-premium btn-danger text-xs"
             title="Sign Out"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -69,26 +69,22 @@ export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onL
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
+          <button
             onClick={onOpenPreTrip}
-            className="px-4 py-2.5 rounded-xl bg-violet-500/20 hover:bg-violet-500/35 text-violet-300 font-bold text-sm flex items-center gap-2 border border-violet-500/40 shadow-glow-violet transition-all"
+            className="px-4 py-2.5 rounded-xl btn-premium btn-violet text-sm shadow-glow-violet transition-all"
           >
-            <Plane className="w-4 h-4 text-violet-400" />
+            <Plane className="w-4 h-4" />
             Pre-Trip Planner
-          </motion.button>
+          </button>
 
           {!isReadOnly && (
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+            <button
               onClick={() => onOpenExpenseModal()}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-bold text-sm flex items-center gap-2 shadow-glow-cyan hover:brightness-110 transition-all"
+              className="px-5 py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan transition-all"
             >
               <PlusCircle className="w-4 h-4" />
               Log Purchase
-            </motion.button>
+            </button>
           )}
         </div>
       </div>

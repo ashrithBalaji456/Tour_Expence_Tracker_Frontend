@@ -325,16 +325,14 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-sm transition-colors"
+                className="px-5 py-2.5 rounded-xl btn-premium btn-secondary text-sm transition-all"
               >
                 Cancel
               </button>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+              <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-bold text-sm shadow-glow-cyan flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan flex items-center gap-2 transition-all"
               >
                 {loading ? (
                   <>Saving...</>
@@ -344,7 +342,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
                     {expenseToEdit ? 'Update Purchase' : 'Log Purchase'}
                   </>
                 )}
-              </motion.button>
+              </button>
             </div>
           </form>
         </motion.div>
