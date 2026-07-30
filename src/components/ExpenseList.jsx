@@ -6,6 +6,29 @@ import {
 } from 'lucide-react';
 import CustomDatePicker from './CustomDatePicker';
 
+const renderNotesWithLinks = (text) => {
+  if (!text) return '';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 hover:text-cyan-300 underline font-bold transition-all hover:scale-105 inline-block mx-0.5"
+          onClick={(e) => e.stopPropagation()} // Prevent card click triggers
+        >
+          {part.length > 25 ? part.substring(0, 25) + '...' : part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function ExpenseList({
   expenses,
   selectedDate,
@@ -15,6 +38,7 @@ export default function ExpenseList({
   onCategoryChange,
   onEditExpense,
   onDeleteExpense,
+  isReadOnly = false,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -176,7 +200,7 @@ export default function ExpenseList({
 
                     {expense.notes && (
                       <p className="text-xs text-slate-400/80 italic mt-1 bg-slate-900/40 px-2.5 py-1 rounded-lg border border-white/5 inline-block">
-                        "{expense.notes}"
+                        "{renderNotesWithLinks(expense.notes)}"
                       </p>
                     )}
                   </div>
@@ -189,23 +213,25 @@ export default function ExpenseList({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => onEditExpense(expense)}
-                      className="p-2 rounded-xl hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 transition-colors"
-                      title="Edit expense"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onEditExpense(expense)}
+                        className="p-2 rounded-xl hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 transition-colors"
+                        title="Edit expense"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
 
-                    <button
-                      onClick={() => onDeleteExpense(expense.id)}
-                      className="p-2 rounded-xl hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
-                      title="Delete expense"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => onDeleteExpense(expense.id)}
+                        className="p-2 rounded-xl hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                        title="Delete expense"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}

@@ -107,7 +107,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
       onSaveSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save purchase entry');
+      setError(err.response?.data || 'Failed to save purchase entry');
     } finally {
       setLoading(false);
     }

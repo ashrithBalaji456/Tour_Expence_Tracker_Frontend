@@ -19,6 +19,28 @@ import {
 import { expenseApi } from '../api/expenseApi';
 import CustomDatePicker from './CustomDatePicker';
 
+const renderNotesWithLinks = (text) => {
+  if (!text) return '-';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 hover:text-cyan-300 underline font-bold transition-all hover:scale-105 inline-block mx-0.5"
+        >
+          {part.length > 25 ? part.substring(0, 25) + '...' : part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function PreTripPlanner({ onBack }) {
   // Members & Expenses data
   const [members, setMembers] = useState([]);
@@ -91,7 +113,7 @@ export default function PreTripPlanner({ onBack }) {
       setSuccessMsg('Member added successfully!');
       loadPreTripData();
     } catch (err) {
-      setError('Failed to add group member.');
+      setError(err.response?.data || 'Failed to add group member.');
     }
   };
 
@@ -106,7 +128,7 @@ export default function PreTripPlanner({ onBack }) {
       setEditingBudgetVal('');
       loadPreTripData();
     } catch (err) {
-      setError('Failed to update budget limit.');
+      setError(err.response?.data || 'Failed to update budget limit.');
     }
   };
 
@@ -116,7 +138,7 @@ export default function PreTripPlanner({ onBack }) {
         await expenseApi.deletePreTripMember(id);
         loadPreTripData();
       } catch (err) {
-        setError('Failed to delete member.');
+        setError(err.response?.data || 'Failed to delete member.');
       }
     }
   };
@@ -152,7 +174,7 @@ export default function PreTripPlanner({ onBack }) {
       });
       loadPreTripData();
     } catch (err) {
-      setError('Failed to save pre-trip booking.');
+      setError(err.response?.data || 'Failed to save pre-trip booking.');
     }
   };
 
@@ -173,7 +195,7 @@ export default function PreTripPlanner({ onBack }) {
         await expenseApi.deletePreTripExpense(id);
         loadPreTripData();
       } catch (err) {
-        setError('Failed to delete booking.');
+        setError(err.response?.data || 'Failed to delete booking.');
       }
     }
   };
@@ -184,6 +206,8 @@ export default function PreTripPlanner({ onBack }) {
       setExpenseForm((prev) => ({ ...prev, spentBy: members[0].name }));
     }
   }, [members, expenseForm.spentBy]);
+
+  const isReadOnly = summary?.isReadOnly || summary?.readOnly || false;
 
   return (
     <div className="space-y-6">
@@ -231,32 +255,34 @@ export default function PreTripPlanner({ onBack }) {
             </h3>
 
             {/* Add Member Form */}
-            <form onSubmit={handleAddMember} className="space-y-3 mb-4">
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Name (e.g. Rahul)"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  className="glass-input rounded-xl px-3 py-2 text-xs"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Budget (default 10k)"
-                  value={newMemberBudget}
-                  onChange={(e) => setNewMemberBudget(e.target.value)}
-                  className="glass-input rounded-xl px-3 py-2 text-xs font-semibold text-violet-300"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Add Member
-              </button>
-            </form>
+            {!isReadOnly && (
+              <form onSubmit={handleAddMember} className="space-y-3 mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Name (e.g. Rahul)"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="glass-input rounded-xl px-3 py-2 text-xs"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Budget (default 10k)"
+                    value={newMemberBudget}
+                    onChange={(e) => setNewMemberBudget(e.target.value)}
+                    className="glass-input rounded-xl px-3 py-2 text-xs font-semibold text-violet-300"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Add Member
+                </button>
+              </form>
+            )}
 
             {/* Members List */}
             <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
@@ -293,25 +319,29 @@ export default function PreTripPlanner({ onBack }) {
                         ) : (
                           <p className="text-[10px] text-slate-400">
                             Budget: <span className="text-violet-300 font-bold">₹{parseFloat(member.budgetLimit).toLocaleString()}</span>
-                            <button
-                              onClick={() => {
-                                setEditingMemberId(member.id);
-                                setEditingBudgetVal(member.budgetLimit.toString());
-                              }}
-                              className="text-slate-500 hover:text-white ml-2 underline text-[9px]"
-                            >
-                              Edit Limit
-                            </button>
+                            {!isReadOnly && (
+                              <button
+                                onClick={() => {
+                                  setEditingMemberId(member.id);
+                                  setEditingBudgetVal(member.budgetLimit.toString());
+                                }}
+                                className="text-slate-500 hover:text-white ml-2 underline text-[9px]"
+                              >
+                                Edit Limit
+                              </button>
+                            )}
                           </p>
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteMember(member.id)}
-                      className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -327,119 +357,125 @@ export default function PreTripPlanner({ onBack }) {
               2. Log Pre-Trip Booking
             </h3>
 
-            <form onSubmit={handleSaveExpense} className="space-y-3.5">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Title *</label>
-                <input
-                  type="text"
-                  placeholder="Flight tickets, Hotel deposit..."
-                  value={expenseForm.title}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-                  className="w-full glass-input rounded-xl px-3.5 py-2 text-xs"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            {!isReadOnly ? (
+              <form onSubmit={handleSaveExpense} className="space-y-3.5">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Amount (₹) *</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Title *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    placeholder="12000"
-                    value={expenseForm.amount}
-                    onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                    className="w-full glass-input rounded-xl px-3.5 py-2 text-xs font-semibold text-cyan-400"
+                    type="text"
+                    placeholder="Flight tickets, Hotel deposit..."
+                    value={expenseForm.title}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
+                    className="w-full glass-input rounded-xl px-3.5 py-2 text-xs"
                     required
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Amount (₹) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="12000"
+                      value={expenseForm.amount}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                      className="w-full glass-input rounded-xl px-3.5 py-2 text-xs font-semibold text-cyan-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Date</label>
+                    <CustomDatePicker
+                      value={expenseForm.expenseDate}
+                      onChange={(date) => setExpenseForm({ ...expenseForm, expenseDate: date })}
+                      placeholder="Select booking date..."
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Date</label>
-                  <CustomDatePicker
-                    value={expenseForm.expenseDate}
-                    onChange={(date) => setExpenseForm({ ...expenseForm, expenseDate: date })}
-                    placeholder="Select booking date..."
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Paid By *</label>
+                  {members.length === 0 ? (
+                    <p className="text-slate-500 text-[11px] italic">Please add group members first</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {members.map((m) => {
+                        const isSelected = expenseForm.spentBy === m.name;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setExpenseForm({ ...expenseForm, spentBy: m.name })}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                              isSelected
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-glow-cyan scale-[1.02]'
+                                : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            {m.name}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => setExpenseForm({ ...expenseForm, spentBy: 'Group' })}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                          expenseForm.spentBy === 'Group'
+                            ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-glow-purple scale-[1.02]'
+                            : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-white hover:border-white/20'
+                        }`}
+                      >
+                        👥 Shared (Group)
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notes (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Additional booking detail..."
+                    value={expenseForm.notes}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
+                    className="w-full glass-input rounded-xl px-3.5 py-2 text-xs"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Paid By *</label>
-                {members.length === 0 ? (
-                  <p className="text-slate-500 text-[11px] italic">Please add group members first</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {members.map((m) => {
-                      const isSelected = expenseForm.spentBy === m.name;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setExpenseForm({ ...expenseForm, spentBy: m.name })}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                            isSelected
-                              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-glow-cyan scale-[1.02]'
-                              : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-white hover:border-white/20'
-                          }`}
-                        >
-                          {m.name}
-                        </button>
-                      );
-                    })}
-
+                <div className="pt-2 flex gap-2">
+                  {editingExpenseId && (
                     <button
                       type="button"
-                      onClick={() => setExpenseForm({ ...expenseForm, spentBy: 'Group' })}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        expenseForm.spentBy === 'Group'
-                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-glow-purple scale-[1.02]'
-                          : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-white hover:border-white/20'
-                      }`}
+                      onClick={() => {
+                        setEditingExpenseId(null);
+                        setExpenseForm({
+                          title: '',
+                          amount: '',
+                          spentBy: members.length > 0 ? members[0].name : '',
+                          expenseDate: new Date().toISOString().split('T')[0],
+                          notes: ''
+                        });
+                      }}
+                      className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
                     >
-                      👥 Shared (Group)
+                      Cancel Edit
                     </button>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notes (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="Additional booking detail..."
-                  value={expenseForm.notes}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
-                  className="w-full glass-input rounded-xl px-3.5 py-2 text-xs"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                {editingExpenseId && (
+                  )}
                   <button
-                    type="button"
-                    onClick={() => {
-                      setEditingExpenseId(null);
-                      setExpenseForm({
-                        title: '',
-                        amount: '',
-                        spentBy: members.length > 0 ? members[0].name : '',
-                        expenseDate: new Date().toISOString().split('T')[0],
-                        notes: ''
-                      });
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+                    type="submit"
+                    className="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-glow-cyan"
                   >
-                    Cancel Edit
+                    {editingExpenseId ? 'Update Booking' : 'Log Booking'}
                   </button>
-                )}
-                <button
-                  type="submit"
-                  className="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-glow-cyan"
-                >
-                  {editingExpenseId ? 'Update Booking' : 'Log Booking'}
-                </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-6 text-center text-slate-400 text-xs italic bg-slate-950/40 rounded-2xl border border-white/5">
+                🚫 Logging new bookings is disabled. Only the trip admin can edit pre-trip plans.
               </div>
-            </form>
+            )}
           </div>
         </div>
 
@@ -570,7 +606,7 @@ export default function PreTripPlanner({ onBack }) {
                   <th className="pb-3 pr-2">Paid By</th>
                   <th className="pb-3 pr-2">Amount</th>
                   <th className="pb-3 pr-2">Notes</th>
-                  <th className="pb-3 text-right">Actions</th>
+                  {!isReadOnly && <th className="pb-3 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -584,23 +620,25 @@ export default function PreTripPlanner({ onBack }) {
                       </span>
                     </td>
                     <td className="py-3 font-bold text-cyan-400">₹{parseFloat(exp.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3 text-slate-400 italic">"{exp.notes || '-'}"</td>
-                    <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleEditExpense(exp)}
-                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id)}
-                          className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+                    <td className="py-3 text-slate-400 italic">"{renderNotesWithLinks(exp.notes)}"</td>
+                    {!isReadOnly && (
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleEditExpense(exp)}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteExpense(exp.id)}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

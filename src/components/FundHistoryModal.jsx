@@ -3,6 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, History, Search, Trash2, Calendar, User, Wallet, Smartphone, ArrowLeftRight, Layers } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 
+const renderNotesWithLinks = (text) => {
+  if (!text) return '';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 hover:text-cyan-300 underline font-bold transition-all hover:scale-105 inline-block mx-0.5"
+        >
+          {part.length > 25 ? part.substring(0, 25) + '...' : part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function FundHistoryModal({ isOpen, onClose, funds, initialFilter = 'ALL', onDeleteFundSuccess }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(initialFilter); // 'ALL' | 'CASH' | 'ONLINE'
@@ -227,7 +249,7 @@ export default function FundHistoryModal({ isOpen, onClose, funds, initialFilter
                           {fund.notes && (
                             <>
                               <span>•</span>
-                              <span className="italic text-slate-300">"{fund.notes}"</span>
+                              <span className="italic text-slate-300">"{renderNotesWithLinks(fund.notes)}"</span>
                             </>
                           )}
                         </div>

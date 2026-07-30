@@ -9,10 +9,14 @@ import FundModal from './components/FundModal';
 import FundHistoryModal from './components/FundHistoryModal';
 import PreTripPlanner from './components/PreTripPlanner';
 import CalculatorWidget from './components/CalculatorWidget';
+import AuthScreens from './components/AuthScreens';
 import { expenseApi } from './api/expenseApi';
 import { Users, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem('token') && !!localStorage.getItem('activeGroupId')
+  );
   const [summary, setSummary] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [funds, setFunds] = useState([]);
@@ -34,6 +38,7 @@ export default function App() {
   };
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       setLoading(true);
       const summaryData = await expenseApi.getSummary();
@@ -44,7 +49,6 @@ export default function App() {
 
       let expenseData = [];
       if (selectedDate) {
-        // Calls the GET /api/expenses/date/{date} endpoint!
         expenseData = await expenseApi.getExpensesByDate(selectedDate);
       } else if (selectedCategory !== 'ALL') {
         expenseData = await expenseApi.getExpensesByCategory(selectedCategory);
@@ -58,11 +62,39 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, selectedCategory]);
+  }, [selectedDate, selectedCategory, isAuthenticated]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [loadData, isAuthenticated]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('activeGroupId');
+    setIsAuthenticated(false);
+    setSummary(null);
+    setExpenses([]);
+  };
+
+  const handleSwitchTrip = () => {
+    localStorage.removeItem('activeGroupId');
+    setIsAuthenticated(false);
+    setSummary(null);
+    setExpenses([]);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <AuthScreens
+        onAuthSuccess={(data) => {
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
 
   const handleOpenExpenseModal = (expense = null) => {
     setExpenseToEdit(expense);
@@ -75,10 +107,12 @@ export default function App() {
         await expenseApi.deleteExpense(id);
         loadData();
       } catch (err) {
-        console.error('Failed to delete expense:', err);
+        alert(err.response?.data || 'Failed to delete expense.');
       }
     }
   };
+
+  const isReadOnly = summary?.isReadOnly || summary?.readOnly || false;
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
@@ -89,12 +123,22 @@ export default function App() {
         }} />
       ) : (
         <>
+          {/* Read-Only Warning Banner */}
+          {isReadOnly && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-glow-amber">
+              <span>⚠️ Read-Only Mode: You are viewing this trip as a group member. Only the creator can log purchases or edit budgets.</span>
+            </div>
+          )}
+
           {/* 1. Header */}
           <Header
+            summary={summary}
             onOpenExpenseModal={() => handleOpenExpenseModal(null)}
             onOpenFundModal={() => setIsFundModalOpen(true)}
             onOpenFundHistory={() => handleOpenFundHistory('ALL')}
             onOpenPreTrip={() => setCurrentView('pretrip')}
+            onLogout={handleLogout}
+            onSwitchTrip={handleSwitchTrip}
           />
 
           {/* 2. Metric Summary Cards */}
@@ -104,7 +148,7 @@ export default function App() {
           />
 
           {/* 3. 1-Tap Express Purchases (Water bottle, Snacks, Cab) */}
-          <QuickWaterButton onExpenseAdded={loadData} />
+          {!isReadOnly && <QuickWaterButton onExpenseAdded={loadData} />}
 
           {/* 4. Analytics & Spending Breakdown */}
           <AnalyticsCharts summary={summary} expenses={expenses} />
@@ -178,6 +222,7 @@ export default function App() {
             onCategoryChange={(cat) => setSelectedCategory(cat)}
             onEditExpense={(exp) => handleOpenExpenseModal(exp)}
             onDeleteExpense={handleDeleteExpense}
+            isReadOnly={isReadOnly}
           />
         </>
       )}

@@ -1,15 +1,62 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tour-expence-tracker-backend.onrender.com/api';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8080/api';
+    }
+  }
+  return import.meta.env.VITE_API_URL || 'https://tour-expence-tracker-backend.onrender.com/api';
+};
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// Request interceptor to attach JWT token to all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    const activeGroupId = localStorage.getItem('activeGroupId');
+    if (activeGroupId) {
+      config.headers['X-Trip-Group-Id'] = activeGroupId;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export const expenseApi = {
+  // Auth & Group Operations
+  login: async (username, password) => {
+    const response = await api.post('/auth/login', { username, password });
+    return response.data;
+  },
+
+  register: async (username, email, password) => {
+    const response = await api.post('/auth/register', { username, email, password });
+    return response.data;
+  },
+
+  createGroup: async (groupName, memberUsernames) => {
+    const response = await api.post('/auth/group', { groupName, memberUsernames });
+    return response.data;
+  },
+
+  getMyGroups: async () => {
+    const response = await api.get('/auth/groups');
+    return response.data;
+  },
+
   // Dashboard Summary
   getSummary: async () => {
     const response = await api.get('/dashboard/summary');
@@ -46,19 +93,14 @@ export const expenseApi = {
     await api.delete(`/expenses/${id}`);
   },
 
-  // Funds CRUD
+  // Funds CRUD (kept for reference, pool deposits simplified)
   getAllFunds: async () => {
     const response = await api.get('/funds');
     return response.data;
   },
 
-  addFund: async (fundData) => {
+  createFund: async (fundData) => {
     const response = await api.post('/funds', fundData);
-    return response.data;
-  },
-
-  updateFund: async (id, fundData) => {
-    const response = await api.put(`/funds/${id}`, fundData);
     return response.data;
   },
 
@@ -66,7 +108,7 @@ export const expenseApi = {
     await api.delete(`/funds/${id}`);
   },
 
-  // Pre-Trip Planner API
+  // Pre-Trip / Upfront Bookings CRUD
   getPreTripMembers: async () => {
     const response = await api.get('/pretrip/members');
     return response.data;
