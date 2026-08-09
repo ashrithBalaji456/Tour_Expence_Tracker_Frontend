@@ -28,6 +28,8 @@ export default function App() {
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isFundHistoryOpen, setIsFundHistoryOpen] = useState(false);
   const [fundHistoryFilter, setFundHistoryFilter] = useState('ALL');
+  const [settlingTransfer, setSettlingTransfer] = useState(null);
+  const [settleAmountInput, setSettleAmountInput] = useState('');
 
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'pretrip'
   const [loading, setLoading] = useState(true);
@@ -112,6 +114,33 @@ export default function App() {
     }
   };
 
+  const handleOpenSettle = (transfer) => {
+    setSettlingTransfer(transfer);
+    setSettleAmountInput(transfer.amount.toString());
+  };
+
+  const handleConfirmSettle = async (amountToSettle) => {
+    if (!amountToSettle || isNaN(parseFloat(amountToSettle)) || parseFloat(amountToSettle) <= 0) {
+      alert("Please enter a valid positive settlement amount.");
+      return;
+    }
+    try {
+      await expenseApi.createExpense({
+        title: `Settlement: ${settlingTransfer.fromMember} to ${settlingTransfer.toMember}`,
+        amount: parseFloat(amountToSettle),
+        category: 'SETTLEMENT',
+        paymentMode: 'CASH',
+        paidBy: settlingTransfer.fromMember,
+        expenseDate: new Date().toISOString().split('T')[0],
+        notes: `Settle:${settlingTransfer.fromMember}:${settlingTransfer.toMember}`
+      });
+      setSettlingTransfer(null);
+      loadData();
+    } catch (err) {
+      alert(err.response?.data || 'Failed to record settlement.');
+    }
+  };
+
   const isReadOnly = summary?.isReadOnly || summary?.readOnly || false;
 
   return (
@@ -170,14 +199,24 @@ export default function App() {
                   summary?.transfers?.map((t, idx) => (
                     <div
                       key={idx}
-                      className="p-3.5 rounded-2xl bg-slate-950/70 border border-white/5 flex items-center justify-between text-xs sm:text-sm"
+                      className="p-3.5 rounded-2xl bg-slate-950/70 border border-white/5 flex items-center justify-between text-xs sm:text-sm gap-2"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-purple-300">{t.fromMember}</span>
                         <ArrowRight className="w-4 h-4 text-slate-500" />
                         <span className="font-bold text-emerald-400">{t.toMember}</span>
                       </div>
-                      <strong className="text-white text-base font-black">₹{t.amount.toLocaleString()}</strong>
+                      <div className="flex items-center gap-3">
+                        <strong className="text-white text-base font-black">₹{t.amount.toLocaleString()}</strong>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => handleOpenSettle(t)}
+                            className="px-2.5 py-1 rounded-lg btn-premium bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[10px] font-bold transition-all"
+                          >
+                            Settle
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -248,6 +287,66 @@ export default function App() {
         initialFilter={fundHistoryFilter}
         onDeleteFundSuccess={loadData}
       />
+      {settlingTransfer && (
+        <AnimatePresence>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSettlingTransfer(null)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-md"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="glass-modal rounded-3xl p-6 w-full max-w-sm relative z-10 shadow-2xl border border-white/10"
+            >
+              <h3 className="text-base font-bold text-white mb-3">🤝 Record Debt Settlement</h3>
+              <p className="text-xs text-slate-400 mb-4">
+                Confirm payment from <strong className="text-purple-300">{settlingTransfer.fromMember}</strong> to <strong className="text-emerald-400">{settlingTransfer.toMember}</strong>.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Settlement Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={settleAmountInput}
+                    onChange={(e) => setSettleAmountInput(e.target.value)}
+                    className="w-full glass-input rounded-xl px-4 py-2.5 text-sm font-semibold text-cyan-400"
+                    placeholder="0.00"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Remaining debt: ₹{settlingTransfer.amount.toLocaleString()}</p>
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSettlingTransfer(null)}
+                    className="flex-1 py-2 rounded-xl btn-premium btn-secondary text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmSettle(settleAmountInput)}
+                    className="flex-grow py-2 rounded-xl btn-premium btn-cyan text-xs shadow-glow-cyan"
+                  >
+                    Confirm Settle
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </AnimatePresence>
+      )}
 
       {/* Floating On-Spot Calculator Widget */}
       <CalculatorWidget />

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Calendar, Filter, Trash2, Edit3, TrendingDown,
-  Droplet, Coffee, Car, Home, ShoppingBag, Ticket, Box, CreditCard, DollarSign, Smartphone
+  Droplet, Coffee, Car, Home, ShoppingBag, Ticket, Box, CreditCard, DollarSign, Smartphone, CheckCircle
 } from 'lucide-react';
 import CustomDatePicker from './CustomDatePicker';
 
@@ -51,6 +51,7 @@ export default function ExpenseList({
       case 'ACCOMMODATION': return <Home className="w-4 h-4 text-violet-400" />;
       case 'SHOPPING': return <ShoppingBag className="w-4 h-4 text-rose-400" />;
       case 'ENTERTAINMENT': return <Ticket className="w-4 h-4 text-yellow-400" />;
+      case 'SETTLEMENT': return <CheckCircle className="w-4 h-4 text-purple-400" />;
       default: return <Box className="w-4 h-4 text-slate-400" />;
     }
   };
@@ -63,6 +64,7 @@ export default function ExpenseList({
       case 'ACCOMMODATION': return 'bg-violet-500/10 text-violet-400 border-violet-500/30';
       case 'SHOPPING': return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
       case 'ENTERTAINMENT': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
+      case 'SETTLEMENT': return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
       default: return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
     }
   };
