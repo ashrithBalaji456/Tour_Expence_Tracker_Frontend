@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import SummaryCards from './components/SummaryCards';
 import QuickWaterButton from './components/QuickWaterButton';
