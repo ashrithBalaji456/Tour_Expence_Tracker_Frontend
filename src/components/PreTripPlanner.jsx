@@ -548,37 +548,7 @@ export default function PreTripPlanner({ onBack }) {
             </div>
           </div>
 
-          {/* Transfers & Settlements Card */}
-          <div className="glass-card rounded-3xl p-5 border border-white/10 relative overflow-hidden">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
-            
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
-              <DollarSign className="w-4 h-4 text-purple-400" />
-              Pre-Trip Settlements
-            </h3>
 
-            <div className="space-y-2.5">
-              {summary.transfers.length === 0 ? (
-                <div className="text-center py-6 border border-dashed border-slate-700/60 rounded-2xl">
-                  <p className="text-slate-400 text-xs italic">All settled. No transactions needed.</p>
-                </div>
-              ) : (
-                summary.transfers.map((t, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl bg-slate-950/70 border border-white/5 flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-purple-300">{t.fromMember}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="font-bold text-emerald-400">{t.toMember}</span>
-                    </div>
-                    <strong className="text-white text-sm font-black">₹{t.amount.toLocaleString()}</strong>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
 
         </div>
 

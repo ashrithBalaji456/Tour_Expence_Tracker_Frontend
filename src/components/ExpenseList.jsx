@@ -1,10 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Calendar, Filter, Trash2, Edit3, TrendingDown,
-  Droplet, Coffee, Car, Home, ShoppingBag, Ticket, Box, CreditCard, DollarSign, Smartphone, CheckCircle
+  Droplet, Coffee, Car, Home, ShoppingBag, Ticket, Box, CreditCard, DollarSign, Smartphone, CheckCircle,
+  ChevronDown
 } from 'lucide-react';
 import CustomDatePicker from './CustomDatePicker';
+
+const SORT_OPTIONS = [
+  { value: 'DATE_DESC', label: '📅 Date (Newest)' },
+  { value: 'DATE_ASC', label: '📅 Date (Oldest)' },
+  { value: 'NAME_ASC', label: '🔤 Name (A-Z)' },
+  { value: 'NAME_DESC', label: '🔤 Name (Z-A)' },
+  { value: 'AMOUNT_DESC', label: '💰 Amount (High to Low)' },
+  { value: 'AMOUNT_ASC', label: '💰 Amount (Low to High)' },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: 'ALL', label: 'All Categories' },
+  { value: 'FOOD', label: '🍕 Food' },
+  { value: 'DRINKS', label: '💧 Drinks & Water' },
+  { value: 'TRANSPORT', label: '🚕 Transport' },
+  { value: 'ACCOMMODATION', label: '🏨 Stay' },
+  { value: 'SHOPPING', label: '🛍️ Shopping' },
+  { value: 'ENTERTAINMENT', label: '🎟️ Entertainment' },
+  { value: 'MISC', label: '📦 Misc' },
+];
 
 const renderNotesWithLinks = (text) => {
   if (!text) return '';
@@ -41,6 +62,37 @@ export default function ExpenseList({
   isReadOnly = false,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('DATE_DESC');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  
+  const sortRef = useRef(null);
+  const categoryRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sortRef.current && !sortRef.current.contains(event.target)) {
+        setIsSortOpen(false);
+      }
+      if (categoryRef.current && !categoryRef.current.contains(event.target)) {
+        setIsCategoryOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getSortOptionLabel = (val) => {
+    const found = SORT_OPTIONS.find(opt => opt.value === val);
+    return found ? found.label : '📅 Date (Newest)';
+  };
+
+  const getCategoryOptionLabel = (val) => {
+    const found = CATEGORY_OPTIONS.find(opt => opt.value === val);
+    return found ? found.label : 'All Categories';
+  };
 
   // Category Icon Mapping
   const getCategoryIcon = (category) => {
@@ -87,6 +139,26 @@ export default function ExpenseList({
     return matchesSearch;
   });
 
+  const sortedExpenses = [...filteredExpenses].sort((a, b) => {
+    if (sortBy === 'NAME_ASC') {
+      return (a.title || '').localeCompare(b.title || '');
+    }
+    if (sortBy === 'NAME_DESC') {
+      return (b.title || '').localeCompare(a.title || '');
+    }
+    if (sortBy === 'AMOUNT_DESC') {
+      return parseFloat(b.amount || 0) - parseFloat(a.amount || 0);
+    }
+    if (sortBy === 'AMOUNT_ASC') {
+      return parseFloat(a.amount || 0) - parseFloat(b.amount || 0);
+    }
+    if (sortBy === 'DATE_ASC') {
+      return (a.expenseDate || '').localeCompare(b.expenseDate || '');
+    }
+    // DATE_DESC (default)
+    return (b.expenseDate || '').localeCompare(a.expenseDate || '');
+  });
+
   const totalFilteredAmount = filteredExpenses.reduce(
     (sum, exp) => sum + parseFloat(exp.amount || 0),
     0
@@ -110,7 +182,7 @@ export default function ExpenseList({
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3">
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -131,28 +203,69 @@ export default function ExpenseList({
           />
 
           {/* Category Filter */}
-          <div className="flex items-center gap-2 glass-input px-3 py-1.5 rounded-xl border border-white/10">
-            <Filter className="w-4 h-4 text-violet-400" />
-            <select
-              value={selectedCategory}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              className="bg-slate-900 text-xs text-white outline-none cursor-pointer"
+          <div className="relative" ref={categoryRef}>
+            <button
+              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+              className="flex items-center gap-2 glass-input px-3.5 py-1.5 rounded-xl border border-white/10 text-xs text-white font-medium hover:bg-white/5 transition-all select-none"
             >
-              <option value="ALL">All Categories</option>
-              <option value="FOOD">🍕 Food</option>
-              <option value="DRINKS">💧 Drinks & Water</option>
-              <option value="TRANSPORT">🚕 Transport</option>
-              <option value="ACCOMMODATION">🏨 Stay</option>
-              <option value="SHOPPING">🛍️ Shopping</option>
-              <option value="ENTERTAINMENT">🎟️ Entertainment</option>
-              <option value="MISC">📦 Misc</option>
-            </select>
+              <Filter className="w-4 h-4 text-violet-400" />
+              <span>{getCategoryOptionLabel(selectedCategory)}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isCategoryOpen && (
+              <div className="absolute right-0 mt-2 w-48 glass-card bg-slate-950/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md z-[100] py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      onCategoryChange(opt.value);
+                      setIsCategoryOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center gap-2 hover:bg-white/10 ${
+                      selectedCategory === opt.value ? 'text-violet-400 font-bold bg-white/5' : 'text-slate-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sort Selector */}
+          <div className="relative" ref={sortRef}>
+            <button
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              className="flex items-center gap-2 glass-input px-3.5 py-1.5 rounded-xl border border-white/10 text-xs text-white font-medium hover:bg-white/5 transition-all select-none"
+            >
+              <span className="text-slate-400 font-semibold">Sort:</span>
+              <span>{getSortOptionLabel(sortBy)}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isSortOpen && (
+              <div className="absolute right-0 mt-2 w-48 glass-card bg-slate-950/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md z-[100] py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setSortBy(opt.value);
+                      setIsSortOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center gap-2 hover:bg-white/10 ${
+                      sortBy === opt.value ? 'text-violet-400 font-bold bg-white/5' : 'text-slate-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* List / Cards */}
-      {filteredExpenses.length === 0 ? (
+      {sortedExpenses.length === 0 ? (
         <div className="text-center py-12 px-4 border border-dashed border-slate-700/60 rounded-2xl">
           <p className="text-slate-400 text-sm font-medium">No purchases logged for this selection.</p>
           <p className="text-slate-500 text-xs mt-1">
@@ -162,7 +275,7 @@ export default function ExpenseList({
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {filteredExpenses.map((expense, index) => (
+            {sortedExpenses.map((expense, index) => (
               <motion.div
                 key={expense.id}
                 initial={{ opacity: 0, y: 15 }}

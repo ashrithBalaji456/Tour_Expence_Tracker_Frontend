@@ -144,6 +144,26 @@ export default function AuthScreens({ onAuthSuccess }) {
     setMembers(updated);
   };
 
+  const handleDeleteGroup = async (groupId, e) => {
+    e.stopPropagation();
+    if (window.confirm("⚠️ Are you sure you want to permanently delete this trip group? This will delete all logged expenses, members, and settlements, and cannot be undone!")) {
+      setLoading(true);
+      setError('');
+      try {
+        await expenseApi.deleteGroup(groupId);
+        const groups = await expenseApi.getMyGroups();
+        setAvailableGroups(groups);
+        if (groups.length === 0) {
+          setScreen('setupGroup');
+        }
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex items-center justify-center p-4">
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -413,22 +433,31 @@ export default function AuthScreens({ onAuthSuccess }) {
                       </h4>
                       <div className="space-y-2">
                         {adminTrips.map((g) => (
-                          <button
+                          <div
                             key={g.groupId}
                             onClick={() => {
                               localStorage.setItem('activeGroupId', g.groupId);
                               onAuthSuccess(g);
                             }}
-                            className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between"
+                            className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between cursor-pointer group"
                           >
                             <div>
                               <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
                               <p className="text-[9px] text-cyan-300/80 mt-0.5">Full Admin Rights</p>
                             </div>
-                            <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-lg font-bold border border-cyan-500/35">
-                              Enter Dashboard
-                            </span>
-                          </button>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2.5 py-1 rounded-lg font-bold border border-cyan-500/35 transition-all group-hover:bg-cyan-500/30">
+                                Enter Dashboard
+                              </span>
+                              <button
+                                onClick={(e) => handleDeleteGroup(g.groupId, e)}
+                                className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 hover:text-white transition-all shadow-glow-rose"
+                                title="Delete Trip Group"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>

@@ -49,8 +49,10 @@ export default function AnalyticsCharts({ summary, expenses }) {
   // Daily timeline data
   const dateMap = {};
   expenses.forEach((exp) => {
-    const date = exp.expenseDate || 'Unknown';
-    dateMap[date] = (dateMap[date] || 0) + parseFloat(exp.amount || 0);
+    if (exp.category !== 'SETTLEMENT') {
+      const date = exp.expenseDate || 'Unknown';
+      dateMap[date] = (dateMap[date] || 0) + parseFloat(exp.amount || 0);
+    }
   });
 
   const barData = Object.keys(dateMap)

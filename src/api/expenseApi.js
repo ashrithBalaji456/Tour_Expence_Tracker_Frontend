@@ -57,6 +57,10 @@ export const expenseApi = {
     return response.data;
   },
 
+  deleteGroup: async (id) => {
+    await api.delete(`/auth/group/${id}`);
+  },
+
   // Dashboard Summary
   getSummary: async () => {
     const response = await api.get('/dashboard/summary');
