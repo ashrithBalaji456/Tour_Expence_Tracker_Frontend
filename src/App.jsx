@@ -11,6 +11,7 @@ import FundHistoryModal from './components/FundHistoryModal';
 import PreTripPlanner from './components/PreTripPlanner';
 import CalculatorWidget from './components/CalculatorWidget';
 import AuthScreens from './components/AuthScreens';
+import { useWarningDialog } from './components/WarningDialog';
 import { expenseApi } from './api/expenseApi';
 import { Users, TrendingUp, ArrowRight } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'pretrip'
   const [loading, setLoading] = useState(true);
+  const { confirm, showAlert, warningDialog } = useWarningDialog();
 
   const handleOpenFundHistory = (filter = 'ALL') => {
     setFundHistoryFilter(filter);
@@ -105,12 +107,14 @@ export default function App() {
   };
 
   const handleDeleteExpense = async (id) => {
-    if (window.confirm('Are you sure you want to delete this purchase entry?')) {
+    if (await confirm('Are you sure you want to delete this purchase entry?', {
+      title: 'Delete purchase entry?',
+    })) {
       try {
         await expenseApi.deleteExpense(id);
         loadData();
       } catch (err) {
-        alert(err.response?.data || 'Failed to delete expense.');
+        showAlert(err.response?.data || 'Failed to delete expense.', { title: 'Delete failed' });
       }
     }
   };
@@ -122,7 +126,7 @@ export default function App() {
 
   const handleConfirmSettle = async (amountToSettle) => {
     if (!amountToSettle || isNaN(parseFloat(amountToSettle)) || parseFloat(amountToSettle) <= 0) {
-      alert("Please enter a valid positive settlement amount.");
+      showAlert('Please enter a valid positive settlement amount.', { title: 'Invalid amount' });
       return;
     }
     try {
@@ -138,7 +142,7 @@ export default function App() {
       setSettlingTransfer(null);
       loadData();
     } catch (err) {
-      alert(err.response?.data || 'Failed to record settlement.');
+      showAlert(err.response?.data || 'Failed to record settlement.', { title: 'Settlement failed' });
     }
   };
 
@@ -351,6 +355,7 @@ export default function App() {
 
       {/* Floating On-Spot Calculator Widget */}
       <CalculatorWidget />
+      {warningDialog}
     </div>
   );
 }

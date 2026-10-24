@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, History, Search, Trash2, Calendar, User, Wallet, Smartphone, ArrowLeftRight, Layers } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
+import { useWarningDialog } from './WarningDialog';
 
 const renderNotesWithLinks = (text) => {
   if (!text) return '';
@@ -30,6 +31,7 @@ export default function FundHistoryModal({ isOpen, onClose, funds, initialFilter
   const [activeTab, setActiveTab] = useState(initialFilter); // 'ALL' | 'CASH' | 'ONLINE'
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const { confirm, warningDialog } = useWarningDialog();
 
   useEffect(() => {
     if (isOpen) {
@@ -83,7 +85,9 @@ export default function FundHistoryModal({ isOpen, onClose, funds, initialFilter
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this deposit entry?')) {
+    if (await confirm('Are you sure you want to delete this deposit entry?', {
+      title: 'Delete deposit entry?',
+    })) {
       setDeletingId(id);
       try {
         await expenseApi.deleteFund(id);
@@ -276,6 +280,7 @@ export default function FundHistoryModal({ isOpen, onClose, funds, initialFilter
           </div>
         </motion.div>
       </div>
+      {warningDialog}
     </AnimatePresence>
   );
 }

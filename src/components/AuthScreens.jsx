@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
+import { useWarningDialog } from './WarningDialog';
 
 export default function AuthScreens({ onAuthSuccess }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'setupGroup' | 'selectGroup'
@@ -19,6 +20,7 @@ export default function AuthScreens({ onAuthSuccess }) {
   const [memberStatuses, setMemberStatuses] = useState({});
   const [authData, setAuthData] = useState(null); // stores token/username temp
   const [availableGroups, setAvailableGroups] = useState([]);
+  const { confirm, warningDialog } = useWarningDialog();
   const currentUsername = (authData?.username || localStorage.getItem('username') || '').trim().toLowerCase();
 
   useEffect(() => {
@@ -221,7 +223,9 @@ export default function AuthScreens({ onAuthSuccess }) {
 
   const handleDeleteGroup = async (groupId, e) => {
     e.stopPropagation();
-    if (window.confirm("⚠️ Are you sure you want to permanently delete this trip group? This will delete all logged expenses, members, and settlements, and cannot be undone!")) {
+    if (await confirm('Are you sure you want to permanently delete this trip group? This will delete all logged expenses, members, and settlements, and cannot be undone!', {
+      title: 'Permanently delete trip group?',
+    })) {
       setLoading(true);
       setError('');
       try {
@@ -618,6 +622,7 @@ export default function AuthScreens({ onAuthSuccess }) {
           })()}
         </AnimatePresence>
       </motion.div>
+      {warningDialog}
     </div>
   );
 }

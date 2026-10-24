@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import CustomDatePicker from './CustomDatePicker';
+import { useWarningDialog } from './WarningDialog';
 
 const renderNotesWithLinks = (text) => {
   if (!text) return '-';
@@ -71,6 +72,7 @@ export default function PreTripPlanner({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const { confirm, warningDialog } = useWarningDialog();
 
   // Load all pre-trip data
   const loadPreTripData = useCallback(async () => {
@@ -133,7 +135,9 @@ export default function PreTripPlanner({ onBack }) {
   };
 
   const handleDeleteMember = async (id) => {
-    if (window.confirm('Delete this member? This might impact splits if they paid for any bookings.')) {
+    if (await confirm('Delete this member? This might impact splits if they paid for any bookings.', {
+      title: 'Delete trip member?',
+    })) {
       try {
         await expenseApi.deletePreTripMember(id);
         loadPreTripData();
@@ -190,7 +194,9 @@ export default function PreTripPlanner({ onBack }) {
   };
 
   const handleDeleteExpense = async (id) => {
-    if (window.confirm('Delete this pre-trip booking?')) {
+    if (await confirm('Delete this pre-trip booking?', {
+      title: 'Delete pre-trip booking?',
+    })) {
       try {
         await expenseApi.deletePreTripExpense(id);
         loadPreTripData();
@@ -616,6 +622,7 @@ export default function PreTripPlanner({ onBack }) {
           )}
         </div>
       </div>
+      {warningDialog}
     </div>
   );
 }
