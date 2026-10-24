@@ -47,6 +47,11 @@ export const expenseApi = {
     return response.data;
   },
 
+  checkMemberExists: async (identifier) => {
+    const response = await api.get('/auth/member-exists', { params: { identifier } });
+    return response.data.exists;
+  },
+
   createGroup: async (groupName, memberUsernames) => {
     const response = await api.post('/auth/group', { groupName, memberUsernames });
     return response.data;

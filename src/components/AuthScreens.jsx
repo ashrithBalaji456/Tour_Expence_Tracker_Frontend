@@ -16,6 +16,7 @@ export default function AuthScreens({ onAuthSuccess }) {
   // Group creation inputs
   const [groupName, setGroupName] = useState('');
   const [members, setMembers] = useState(['']); // dynamic list of usernames
+  const [memberStatuses, setMemberStatuses] = useState({});
   const [authData, setAuthData] = useState(null); // stores token/username temp
   const [availableGroups, setAvailableGroups] = useState([]);
 
@@ -42,6 +43,48 @@ export default function AuthScreens({ onAuthSuccess }) {
         });
     }
   }, []);
+
+  useEffect(() => {
+    if (screen !== 'setupGroup') {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const identifiers = [...new Set(members.map(member => member.trim()).filter(Boolean))];
+    const timeoutId = window.setTimeout(() => {
+      setMemberStatuses(previous => {
+        const next = { ...previous };
+        identifiers.forEach(identifier => {
+          next[identifier.toLowerCase()] = { status: 'checking' };
+        });
+        return next;
+      });
+
+      identifiers.forEach(async (identifier) => {
+        try {
+          const exists = await expenseApi.checkMemberExists(identifier);
+          if (!cancelled) {
+            setMemberStatuses(previous => ({
+              ...previous,
+              [identifier.toLowerCase()]: { status: exists ? 'exists' : 'missing' }
+            }));
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setMemberStatuses(previous => ({
+              ...previous,
+              [identifier.toLowerCase()]: { status: 'error' }
+            }));
+          }
+        }
+      });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [members, screen]);
 
   const getErrorMessage = (err) => {
     if (!err) return '';
@@ -113,6 +156,27 @@ export default function AuthScreens({ onAuthSuccess }) {
     setLoading(true);
     try {
       const activeMembers = members.filter(m => m.trim() !== '');
+      const memberResults = await Promise.all(activeMembers.map(async (member) => ({
+        member,
+        exists: await expenseApi.checkMemberExists(member.trim())
+      })));
+      const missingMember = memberResults.find(result => !result.exists);
+      if (missingMember) {
+        setMemberStatuses(previous => ({
+          ...previous,
+          [missingMember.member.trim().toLowerCase()]: { status: 'missing' }
+        }));
+        setError(`No account found for "${missingMember.member.trim()}". Ask them to create an account first.`);
+        return;
+      }
+
+      setMemberStatuses(previous => ({
+        ...previous,
+        ...Object.fromEntries(memberResults.map(({ member }) => [
+          member.trim().toLowerCase(),
+          { status: 'exists' }
+        ]))
+      }));
       const groupData = await expenseApi.createGroup(groupName, activeMembers);
       localStorage.setItem('activeGroupId', groupData.groupId);
       onAuthSuccess({
@@ -142,6 +206,12 @@ export default function AuthScreens({ onAuthSuccess }) {
     const updated = [...members];
     updated[index] = value;
     setMembers(updated);
+    setMemberStatuses(previous => {
+      const next = { ...previous };
+      delete next[members[index].trim().toLowerCase()];
+      delete next[value.trim().toLowerCase()];
+      return next;
+    });
   };
 
   const handleDeleteGroup = async (groupId, e) => {
@@ -379,13 +449,27 @@ export default function AuthScreens({ onAuthSuccess }) {
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                   {members.map((member, idx) => (
                     <div key={idx} className="flex gap-2 items-center">
-                      <input
-                        type="text"
-                        placeholder={`Member ${idx + 1} Username or Email (e.g. Sai or sai@example.com)`}
-                        value={member}
-                        onChange={(e) => handleMemberChange(idx, e.target.value)}
-                        className="flex-1 glass-input rounded-xl px-3 py-2 text-xs"
-                      />
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder={`Member ${idx + 1} Username or Email (e.g. Sai or sai@example.com)`}
+                          value={member}
+                          onChange={(e) => handleMemberChange(idx, e.target.value)}
+                          className="w-full glass-input rounded-xl px-3 py-2 text-xs"
+                        />
+                        {member.trim() && memberStatuses[member.trim().toLowerCase()]?.status === 'checking' && (
+                          <p className="mt-1 text-[10px] text-slate-400">Checking account...</p>
+                        )}
+                        {member.trim() && memberStatuses[member.trim().toLowerCase()]?.status === 'exists' && (
+                          <p className="mt-1 text-[10px] font-semibold text-emerald-400">Account found. Ready to invite.</p>
+                        )}
+                        {member.trim() && memberStatuses[member.trim().toLowerCase()]?.status === 'missing' && (
+                          <p className="mt-1 text-[10px] font-semibold text-rose-400">No account found. Ask them to create an account first.</p>
+                        )}
+                        {member.trim() && memberStatuses[member.trim().toLowerCase()]?.status === 'error' && (
+                          <p className="mt-1 text-[10px] font-semibold text-rose-400">Could not check this account. Please try again.</p>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeMemberField(idx)}
