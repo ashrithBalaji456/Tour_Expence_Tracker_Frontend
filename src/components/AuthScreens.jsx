@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import { useWarningDialog } from './WarningDialog';
 import { storageService } from '../utils/storage';
 import { nativeService } from '../services/nativeService';
+import OnboardingTour from './OnboardingTour';
 
 const formatTripDate = (dateStr) => {
   if (!dateStr) return '';
@@ -19,6 +20,10 @@ const formatTripDate = (dateStr) => {
 
 export default function AuthScreens({ onAuthSuccess }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'setupGroup' | 'selectGroup'
+  const [showGuide, setShowGuide] = useState(() => {
+    // Show guide by default if user has never dismissed it, or if explicitly requested
+    return !storageService.getItemSync('hasSeenOnboardingGuide');
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -257,6 +262,15 @@ export default function AuthScreens({ onAuthSuccess }) {
     }
   };
 
+  const handleDismissGuide = () => {
+    storageService.setItemSync('hasSeenOnboardingGuide', 'true');
+    setShowGuide(false);
+  };
+
+  if (showGuide) {
+    return <OnboardingTour onComplete={handleDismissGuide} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex items-center justify-center p-4">
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -359,15 +373,27 @@ export default function AuthScreens({ onAuthSuccess }) {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
 
-              <div className="text-center pt-2">
-                <span className="text-xs text-slate-500">Don't have an account? </span>
-                <button
-                  type="button"
-                  onClick={() => { setError(''); setSuccessMsg(''); setScreen('signup'); }}
-                  className="text-xs text-cyan-400 font-bold hover:underline"
-                >
-                  Sign Up
-                </button>
+              <div className="text-center pt-2 space-y-2">
+                <div>
+                  <span className="text-xs text-slate-500">Don't have an account? </span>
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setSuccessMsg(''); setScreen('signup'); }}
+                    className="text-xs text-cyan-400 font-bold hover:underline"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuide(true)}
+                    className="text-[11px] text-slate-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 transition-colors"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    How this app works & features guide
+                  </button>
+                </div>
               </div>
             </motion.form>
           )}
