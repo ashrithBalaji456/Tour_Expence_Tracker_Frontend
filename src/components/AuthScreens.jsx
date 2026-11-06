@@ -21,8 +21,14 @@ const formatTripDate = (dateStr) => {
 export default function AuthScreens({ onAuthSuccess }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'setupGroup' | 'selectGroup'
   const [showGuide, setShowGuide] = useState(() => {
-    // Show guide by default if user has never dismissed it, or if explicitly requested
-    return !storageService.getItemSync('hasSeenOnboardingGuide');
+    try {
+      const token = storageService.getToken();
+      if (token) return false; // Existing logged-in users go straight to trips
+      const seen = storageService.getItem('hasSeenOnboardingGuide');
+      return !seen;
+    } catch (e) {
+      return false;
+    }
   });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

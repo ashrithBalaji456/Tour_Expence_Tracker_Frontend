@@ -86,6 +86,10 @@ export const storageService = {
     return null;
   },
 
+  getItemSync(key) {
+    return this.getItem(key);
+  },
+
   /**
    * Asynchronous getter reading directly from native preferences if available.
    */
