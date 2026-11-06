@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./public/tour_thumbnail.jpg" alt="Tour Expense Tracker - Double Decker Bus Adventure" width="100%" style="border-radius: 16px; margin-bottom: 16px; max-height: 400px; object-fit: cover;" />
+
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0EA5E9,100:8B5CF6&height=200&section=header&text=Tour%20Expense%20Tracker&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Frontend%20%E2%80%94%20React%20%2B%20Vite%20%2B%20TailwindCSS&descAlignY=55&descSize=16" />
 
 <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=3000&pause=800&color=8B5CF6&center=true&vCenter=true&width=600&lines=Glassmorphic+Dark+Dashboard+UI;Framer+Motion+Micro-Animations;Real-Time+Trip+Analytics" />

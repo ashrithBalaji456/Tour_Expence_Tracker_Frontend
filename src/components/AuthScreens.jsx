@@ -255,8 +255,18 @@ export default function AuthScreens({ onAuthSuccess }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md glass-card rounded-3xl p-8 border border-white/10 shadow-2xl relative z-10"
+        className="w-full max-w-md glass-card rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl relative z-10"
       >
+        {/* Crazy Road Trip Double-Decker Thumbnail */}
+        <div className="relative mb-5 overflow-hidden rounded-2xl border border-white/10 shadow-xl group">
+          <img
+            src="/tour_thumbnail.jpg"
+            alt="Tour Expense Tracker - Friends on Double Decker Bus"
+            className="w-full h-36 object-cover object-center transform group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-transparent to-transparent opacity-90" />
+        </div>
+
         <div className="text-center mb-6">
           <div className="flex justify-center gap-2 mb-2">
             <span className="px-3 py-1 text-[10px] font-semibold rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
