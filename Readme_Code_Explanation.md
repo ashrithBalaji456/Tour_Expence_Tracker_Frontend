@@ -43,6 +43,7 @@
    - [`components/PreTripPlanner.jsx` (Budgets, Advance Bookings & Split Outflows)](#pretripplannerjsx-line-by-line)
    - [`components/CalculatorWidget.jsx` (Floating On-Spot Calculator)](#calculatorwidgetjsx-line-by-line)
    - [`components/CustomDatePicker.jsx` (Glassmorphic Calendar Picker)](#customdatepickerjsx-line-by-line)
+   - [`components/MemberTimelineModal.jsx` (Mid-Trip Member Onboarding & Editable Timeline)](#membertimelinemodaljsx-line-by-line)
    - [`components/WarningDialog.jsx` (Accessible Confirm & Alert Hook)](#warningdialogjsx-line-by-line)
 6. [Quick React & Tailwind Reference Dictionary](#6-quick-react--tailwind-reference-dictionary)
 
@@ -58,6 +59,26 @@ A **Single Page Application (SPA)** loads a single HTML page once. When you clic
 - JavaScript intercepts your actions in real time.
 - Only the specific part of the screen that changed is re-rendered instantly.
 - The web page feels as smooth, responsive, and tactile as a native mobile app!
+
+### Differences in Roles & Operations: Frontend vs Backend
+
+| Dimension | Frontend (React 18 + Vite + Capacitor) | Backend (Spring Boot 3 + PostgreSQL) |
+|:---|:---|:---|
+| **Metaphor** | The **Face & Experience** | The **Brain & Vault** |
+| **Execution Environment** | User's browser (Vercel) & Android phone (Capacitor) | Remote Linux cloud server (Render) |
+| **Trust Level** | **Untrusted:** Client-side JavaScript can be inspected or bypassed by a malicious actor. | **Authoritative & Trusted:** Must verify all inputs, permissions, and database constraints. |
+| **Primary Operations** | • User interface & responsive layouts (Mobile/Tablet/Desktop)<br>• Glassmorphism dark aesthetic (`#0B0F19`)<br>• Input forms & immediate client validation<br>• Interactive data visualization via Recharts<br>• Native device bridge via Capacitor (CapacitorHttp, Haptics, Back Button) | • Data persistence in PostgreSQL (ACID safety)<br>• Password encryption via BCrypt<br>• Stateless JWT token issuance & signature validation<br>• Temporal expense splitting & debt minimization algorithms<br>• Group multi-tenancy & access control |
+| **Communication Bridge** | Sends HTTP requests via Axios / CapacitorHttp to the backend and renders returned data | Exposes REST API endpoints accepting JSON requests with headers:<br>`Authorization: Bearer <JWT>` and `X-Trip-Group-Id: <id>` |
+
+### What is Capacitor & Hybrid Android Architecture?
+- **Capacitor** is a cross-platform native runtime created by Ionic. It takes our single React + Vite web codebase and bundles it into a native Android Studio project (`android/`) that compiles into an `.apk`.
+- **Single Codebase**: We write React code once, and it runs simultaneously as a hosted website on Vercel and as an installed native Android app on physical smartphones.
+- **`CapacitorHttp` (Native HTTP Bridge)**: Android WebViews enforce strict browser CORS rules that can block requests to external backends. By enabling `CapacitorHttp: { "enabled": true }`, Capacitor automatically routes all network calls through Android's native Java/OkHttp stack, bypassing browser CORS issues completely.
+- **Hardware Integration**: Enables direct access to native Android device capabilities:
+  - `@capacitor/haptics`: Vibrates the phone subtly on important button clicks and payments.
+  - `@capacitor/app`: Listens to the hardware Android back button to dismiss modals and navigate screens.
+  - `@capacitor/status-bar`: Paints the Android status bar and top display cutout to match our `#0B0F19` dark glass theme.
+  - `@capacitor/share`: Opens the native Android share sheet to share expense reports via WhatsApp, Telegram, or Gmail.
 
 ### What is React? (Components, JSX & Virtual DOM)
 - **React** is the world's most popular JavaScript library for building user interfaces, developed by Meta.
@@ -858,6 +879,21 @@ Custom-built calendar picker designed for dark glassmorphism:
 - Highlights the currently selected day in cyan and today's date with a cyan border.
 - Quick action shortcuts: "Today" (sets current date) and "Clear" (resets filter).
 - Automatically closes when clicking outside via a `mousedown` event listener.
+
+---
+
+### `MemberTimelineModal.jsx` Line-by-Line
+File: `Frontend/src/components/MemberTimelineModal.jsx`
+
+Handles mid-trip member onboarding and allows the group host to edit a member's joining timeline at any point:
+- **Member Identity**: Captures member username or name.
+- **Personal Budget Limit**: Sets their individual budget target (default ₹10,000).
+- **Split Participation Modes**:
+  1. `FROM_START`: Retroactive full share. Member participates in all expenses from Day 1.
+  2. `FROM_NOW`: Real-time mid-trip joiner. Only purchases logged from the current instant onward are split with this member.
+  3. `CUSTOM_DATE`: Custom arrival timestamp. Provides interactive Date and Time inputs (e.g. flight arrival at `2026-11-04 14:30`).
+- **Transparency Protection**: All past bills logged before the arrival timestamp are dynamically excluded from their share.
+- **Editable Timeline**: The host can re-open this modal at any time to adjust arrival timestamps or budgets, triggering an automatic re-split.
 
 ---
 
