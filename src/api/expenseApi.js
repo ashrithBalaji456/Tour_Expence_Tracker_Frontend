@@ -30,7 +30,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30s timeout to accommodate Render cold-starts
+  timeout: 60000, // 60s timeout to accommodate Render cold-starts
 });
 
 // Request interceptor to attach JWT token and active group ID
