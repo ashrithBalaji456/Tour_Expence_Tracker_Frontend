@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, CheckCircle2, Banknote, Smartphone, CreditCard, HelpCircle } from 'lucide-react';
+import { X, ShoppingBag, CheckCircle2, Banknote, Smartphone, CreditCard, HelpCircle, Clock } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import { nativeService } from '../services/nativeService';
 import CustomDatePicker from './CustomDatePicker';
+
+const getCurrentTimeStr = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
 
 export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuccess }) {
   const [formData, setFormData] = useState({
@@ -13,6 +18,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
     paidBy: 'Trip Pool',
     paymentMode: 'CASH',
     expenseDate: new Date().toISOString().split('T')[0],
+    expenseTime: getCurrentTimeStr(),
     notes: '',
   });
 
@@ -63,6 +69,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
         paidBy: expenseToEdit.paidBy || 'Trip Pool',
         paymentMode: expenseToEdit.paymentMode || 'CASH',
         expenseDate: expenseToEdit.expenseDate || new Date().toISOString().split('T')[0],
+        expenseTime: expenseToEdit.expenseTime ? expenseToEdit.expenseTime.substring(0, 5) : getCurrentTimeStr(),
         notes: expenseToEdit.notes || '',
       });
     } else {
@@ -73,6 +80,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
         paidBy: members.length > 0 ? members[0].name : 'Trip Pool',
         paymentMode: 'CASH',
         expenseDate: new Date().toISOString().split('T')[0],
+        expenseTime: getCurrentTimeStr(),
         notes: '',
       });
     }
@@ -92,17 +100,21 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
     setLoading(true);
     setError('');
 
+    const formattedTime = formData.expenseTime
+      ? (formData.expenseTime.length === 5 ? `${formData.expenseTime}:00` : formData.expenseTime)
+      : null;
+
     try {
+      const payload = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        expenseTime: formattedTime,
+      };
+
       if (expenseToEdit) {
-        await expenseApi.updateExpense(expenseToEdit.id, {
-          ...formData,
-          amount: parseFloat(formData.amount),
-        });
+        await expenseApi.updateExpense(expenseToEdit.id, payload);
       } else {
-        await expenseApi.createExpense({
-          ...formData,
-          amount: parseFloat(formData.amount),
-        });
+        await expenseApi.createExpense(payload);
       }
 
       nativeService.hapticSuccess();
@@ -179,7 +191,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
                   Amount (₹) *
@@ -204,6 +216,20 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
                   value={formData.expenseDate}
                   onChange={(date) => setFormData({ ...formData, expenseDate: date })}
                   placeholder="Select date..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                  Time (Optional)
+                </label>
+                <input
+                  type="time"
+                  name="expenseTime"
+                  value={formData.expenseTime || ''}
+                  onChange={handleChange}
+                  className="w-full glass-input rounded-xl px-3 py-2 text-xs font-semibold"
                 />
               </div>
             </div>

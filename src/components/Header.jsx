@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Compass, Sparkles, PlusCircle, Plane, LogOut, User, Wallet, History, Share2, Check } from 'lucide-react';
+import { Compass, Sparkles, PlusCircle, Plane, LogOut, User, Wallet, History, Share2, Check, UserPlus } from 'lucide-react';
 import { storageService } from '../utils/storage';
 import { nativeService } from '../services/nativeService';
 
-export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onLogout, onSwitchTrip, onOpenFundModal, onOpenFundHistory }) {
+export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onLogout, onSwitchTrip, onOpenFundModal, onOpenFundHistory, onOpenMemberModal }) {
   const [copied, setCopied] = useState(false);
   const username = storageService.getUsername() || 'User';
   const groupName = summary?.groupName || 'Trip Cash Tracker';
@@ -118,6 +118,17 @@ export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onL
             <Plane className="w-4 h-4" />
             Pre-Trip Planner
           </button>
+
+          {!isReadOnly && onOpenMemberModal && (
+            <button
+              onClick={onOpenMemberModal}
+              className="px-3.5 py-2.5 rounded-xl btn-premium btn-secondary text-sm border border-violet-500/30 text-violet-300 hover:text-white hover:bg-violet-500/10 transition-all flex items-center gap-1.5"
+              title="Add Mid-Trip Member"
+            >
+              <UserPlus className="w-4 h-4 text-violet-400" />
+              <span>+ Member</span>
+            </button>
+          )}
 
           {!isReadOnly && (
             <button

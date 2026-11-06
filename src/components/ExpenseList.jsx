@@ -3,9 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Calendar, Filter, Trash2, Edit3, TrendingDown,
   Droplet, Coffee, Car, Home, ShoppingBag, Ticket, Box, CreditCard, DollarSign, Smartphone, CheckCircle,
-  ChevronDown
+  ChevronDown, Clock
 } from 'lucide-react';
 import CustomDatePicker from './CustomDatePicker';
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length >= 2) {
+    let hour = parseInt(parts[0], 10);
+    const minute = parts[1];
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute} ${ampm}`;
+  }
+  return timeStr;
+};
 
 const SORT_OPTIONS = [
   { value: 'DATE_DESC', label: '📅 Date (Newest)' },
@@ -304,6 +317,15 @@ export default function ExpenseList({
                         <Calendar className="w-3 h-3 text-slate-500" />
                         {expense.expenseDate}
                       </span>
+                      {expense.expenseTime && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 text-cyan-300 font-medium">
+                            <Clock className="w-3 h-3 text-cyan-400" />
+                            {formatTime(expense.expenseTime)}
+                          </span>
+                        </>
+                      )}
                       <span>•</span>
                       <span className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
                         {getPaymentModeIcon(expense.paymentMode)}

@@ -16,6 +16,7 @@ import { useWarningDialog } from './components/WarningDialog';
 import { expenseApi } from './api/expenseApi';
 import { storageService } from './utils/storage';
 import { nativeService } from './services/nativeService';
+import MemberTimelineModal from './components/MemberTimelineModal';
 import { Users, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function App() {
@@ -33,6 +34,8 @@ export default function App() {
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isFundHistoryOpen, setIsFundHistoryOpen] = useState(false);
   const [fundHistoryFilter, setFundHistoryFilter] = useState('ALL');
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState(null);
   const [settlingTransfer, setSettlingTransfer] = useState(null);
   const [settleAmountInput, setSettleAmountInput] = useState('');
 
@@ -100,6 +103,11 @@ export default function App() {
         setSettlingTransfer(null);
         return true;
       }
+      if (isMemberModalOpen) {
+        setIsMemberModalOpen(false);
+        setMemberToEdit(null);
+        return true;
+      }
       if (isFundHistoryOpen) {
         setIsFundHistoryOpen(false);
         return true;
@@ -122,6 +130,7 @@ export default function App() {
     return () => unregister();
   }, [
     settlingTransfer,
+    isMemberModalOpen,
     isFundHistoryOpen,
     isFundModalOpen,
     isExpenseModalOpen,
@@ -237,6 +246,11 @@ export default function App() {
               setIsFundModalOpen(true);
             }}
             onOpenFundHistory={() => handleOpenFundHistory('ALL')}
+            onOpenMemberModal={() => {
+              nativeService.hapticLight();
+              setMemberToEdit(null);
+              setIsMemberModalOpen(true);
+            }}
             onOpenPreTrip={() => {
               nativeService.hapticLight();
               setCurrentView('pretrip');
@@ -342,6 +356,16 @@ export default function App() {
       )}
 
       {/* Modals */}
+      <MemberTimelineModal
+        isOpen={isMemberModalOpen}
+        memberToEdit={memberToEdit}
+        onClose={() => {
+          setIsMemberModalOpen(false);
+          setMemberToEdit(null);
+        }}
+        onSuccess={loadData}
+      />
+
       <ExpenseModal
         isOpen={isExpenseModalOpen}
         onClose={() => setIsExpenseModalOpen(false)}

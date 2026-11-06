@@ -14,11 +14,28 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Edit3,
+  Clock,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import CustomDatePicker from './CustomDatePicker';
 import { useWarningDialog } from './WarningDialog';
+import MemberTimelineModal from './MemberTimelineModal';
+
+const formatMemberJoinTime = (isoStr) => {
+  if (!isoStr) return '';
+  const dateObj = new Date(isoStr);
+  if (isNaN(dateObj.getTime())) return isoStr;
+  return dateObj.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 const renderNotesWithLinks = (text) => {
   if (!text) return '-';
@@ -54,6 +71,8 @@ export default function PreTripPlanner({ onBack }) {
   });
 
   // UI state
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberBudget, setNewMemberBudget] = useState('10000');
   const [editingMemberId, setEditingMemberId] = useState(null);
@@ -260,96 +279,82 @@ export default function PreTripPlanner({ onBack }) {
               1. Group Members & Budgets
             </h3>
 
-            {/* Add Member Form */}
+            {/* Add Member Button / Mid-Trip Onboarding */}
             {!isReadOnly && (
-              <form onSubmit={handleAddMember} className="space-y-3 mb-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Name (e.g. Rahul)"
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    className="glass-input rounded-xl px-3 py-2 text-xs"
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Budget (default 10k)"
-                    value={newMemberBudget}
-                    onChange={(e) => setNewMemberBudget(e.target.value)}
-                    className="glass-input rounded-xl px-3 py-2 text-xs font-semibold text-violet-300"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2 rounded-xl btn-premium btn-violet text-xs flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  Add Member
-                </button>
-              </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setMemberToEdit(null);
+                  setIsMemberModalOpen(true);
+                }}
+                className="w-full py-2.5 rounded-2xl btn-premium btn-violet text-xs flex items-center justify-center gap-2 mb-4 shadow-glow-violet font-bold transition-all"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Add Member (Mid-Trip / Beginning)
+              </button>
             )}
 
             {/* Members List */}
-            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
               {members.length === 0 ? (
                 <p className="text-slate-500 text-xs italic text-center py-4">No group members added yet.</p>
               ) : (
-                members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="p-3 rounded-xl bg-slate-950/60 border border-white/5 flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center justify-center text-xs font-bold">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{member.name}</h4>
-                        {editingMemberId === member.id ? (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <input
-                              type="number"
-                              value={editingBudgetVal}
-                              onChange={(e) => setEditingBudgetVal(e.target.value)}
-                              placeholder="Limit"
-                              className="glass-input rounded px-1.5 py-0.5 text-[10px] w-20 font-bold text-violet-300"
-                            />
-                            <button
-                              onClick={() => handleUpdateBudget(member)}
-                              className="text-[10px] bg-violet-500/30 text-violet-200 px-1.5 py-0.5 rounded font-bold"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-slate-400">
-                            Budget: <span className="text-violet-300 font-bold">₹{parseFloat(member.budgetLimit).toLocaleString()}</span>
-                            {!isReadOnly && (
-                              <button
-                                onClick={() => {
-                                  setEditingMemberId(member.id);
-                                  setEditingBudgetVal(member.budgetLimit.toString());
-                                }}
-                                className="text-slate-500 hover:text-white ml-2 underline text-[9px]"
-                              >
-                                Edit Limit
-                              </button>
+                members.map((member) => {
+                  const isMidTrip = member.splitMode === 'CUSTOM_DATE' || member.splitMode === 'FROM_NOW' || Boolean(member.effectiveFrom);
+                  return (
+                    <div
+                      key={member.id}
+                      className="p-3 rounded-2xl bg-slate-950/70 border border-white/5 hover:border-white/10 transition-all flex items-center justify-between gap-2.5"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/30 flex items-center justify-center text-xs font-bold shrink-0">
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs font-bold text-white truncate">{member.name}</h4>
+                            {isMidTrip ? (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30 flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" />
+                                {member.effectiveFrom ? `Joined ${formatMemberJoinTime(member.effectiveFrom)}` : 'Joined Mid-Trip'}
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                From Start
+                              </span>
                             )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Budget: <span className="text-violet-300 font-bold">₹{parseFloat(member.budgetLimit).toLocaleString()}</span>
                           </p>
-                        )}
+                        </div>
                       </div>
+
+                      {!isReadOnly && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              setMemberToEdit(member);
+                              setIsMemberModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-violet-500/20 text-slate-400 hover:text-violet-300 transition-colors"
+                            title="Edit joining date, time, or budget"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMember(member.id)}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
+                            title="Remove member"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    {!isReadOnly && (
-                      <button
-                        onClick={() => handleDeleteMember(member.id)}
-                        className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -542,8 +547,18 @@ export default function PreTripPlanner({ onBack }) {
                 return (
                   <div key={m.memberName} className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-between text-xs">
                     <div>
-                      <span className="font-semibold text-white">{m.memberName}</span>
-                      <p className="text-[10px] text-slate-400">Spent: ₹{m.totalSpent.toLocaleString()}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-white">{m.memberName}</span>
+                        {m.effectiveFrom && (
+                          <span className="text-[9px] text-violet-300 font-bold bg-violet-500/10 px-1 rounded border border-violet-500/20">
+                            Joined {formatMemberJoinTime(m.effectiveFrom)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        Paid: <strong className="text-slate-200">₹{m.totalSpent.toLocaleString()}</strong> • Fair Share: <strong className="text-violet-300">₹{m.share.toLocaleString()}</strong>
+                        {m.eligibleExpenseCount > 0 && <span className="text-slate-500"> ({m.eligibleExpenseCount} expenses)</span>}
+                      </p>
                     </div>
                     <span className={`font-bold ${isCreditor ? 'text-emerald-400' : m.netBalance === 0 ? 'text-slate-400' : 'text-purple-300'}`}>
                       {isCreditor ? '+' : ''}₹{m.netBalance.toLocaleString()}
@@ -622,6 +637,17 @@ export default function PreTripPlanner({ onBack }) {
           )}
         </div>
       </div>
+      
+      <MemberTimelineModal
+        isOpen={isMemberModalOpen}
+        memberToEdit={memberToEdit}
+        onClose={() => {
+          setIsMemberModalOpen(false);
+          setMemberToEdit(null);
+        }}
+        onSuccess={loadPreTripData}
+      />
+
       {warningDialog}
     </div>
   );

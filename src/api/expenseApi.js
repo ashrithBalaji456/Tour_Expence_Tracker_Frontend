@@ -170,6 +170,11 @@ export const expenseApi = {
     return response.data;
   },
 
+  updateMemberTimeline: async (id, memberData) => {
+    const response = await api.put(`/pretrip/members/${id}/timeline`, memberData);
+    return response.data;
+  },
+
   deletePreTripMember: async (id) => {
     await api.delete(`/pretrip/members/${id}`);
   },
