@@ -1,11 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Compass, Sparkles, PlusCircle, Plane, LogOut, User, Wallet, History } from 'lucide-react';
+import { Compass, Sparkles, PlusCircle, Plane, LogOut, User, Wallet, History, Share2, Check } from 'lucide-react';
+import { storageService } from '../utils/storage';
+import { nativeService } from '../services/nativeService';
 
 export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onLogout, onSwitchTrip, onOpenFundModal, onOpenFundHistory }) {
-  const username = localStorage.getItem('username') || 'User';
+  const [copied, setCopied] = useState(false);
+  const username = storageService.getUsername() || 'User';
   const groupName = summary?.groupName || 'Trip Cash Tracker';
   const isReadOnly = summary?.isReadOnly || false;
+
+  const handleShare = async () => {
+    nativeService.hapticLight();
+    const totalSpent = summary?.totalSpent || 0;
+    const remainingBalance = summary?.remainingBalance || 0;
+    const totalBudget = summary?.totalBudget || 0;
+    
+    let text = `✈️ Trip Expense Summary: ${groupName}\n` +
+      `💰 Total Budget: ₹${totalBudget.toLocaleString()}\n` +
+      `🛒 Total Spent: ₹${totalSpent.toLocaleString()}\n` +
+      `💵 Remaining Balance: ₹${remainingBalance.toLocaleString()}\n`;
+
+    if (summary?.transfers && summary.transfers.length > 0) {
+      text += `\n🤝 Settlements:\n`;
+      summary.transfers.forEach(t => {
+        text += `• ${t.fromMember} owes ${t.toMember}: ₹${t.amount.toLocaleString()}\n`;
+      });
+    }
+
+    const res = await nativeService.shareContent({
+      title: `${groupName} - Trip Expenses`,
+      text: text.trim(),
+      dialogTitle: `Share ${groupName} Summary`,
+    });
+
+    if (res === 'COPIED') {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <motion.header
@@ -69,6 +102,15 @@ export default function Header({ summary, onOpenExpenseModal, onOpenPreTrip, onL
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleShare}
+            className="px-3.5 py-2.5 rounded-xl btn-premium btn-secondary text-sm transition-all"
+            title="Share Trip Summary"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4 text-cyan-400" />}
+            <span>{copied ? 'Copied' : 'Share'}</span>
+          </button>
+
           <button
             onClick={onOpenPreTrip}
             className="px-4 py-2.5 rounded-xl btn-premium btn-violet text-sm shadow-glow-violet transition-all"

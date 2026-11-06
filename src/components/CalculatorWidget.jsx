@@ -111,9 +111,10 @@ export default function CalculatorWidget() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-glow-violet border border-violet-500/30 hover:brightness-110 flex items-center justify-center"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] right-4 sm:right-6 z-40 p-3.5 sm:p-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-glow-violet border border-violet-500/30 hover:brightness-110 flex items-center justify-center touch-target"
+        aria-label="Toggle On-Spot Calculator"
       >
-        <Calculator className="w-6 h-6" />
+        <Calculator className="w-5 h-5 sm:w-6 sm:h-6" />
       </motion.button>
 
       {/* Calculator Window */}
@@ -126,7 +127,7 @@ export default function CalculatorWidget() {
             exit={{ opacity: 0, scale: 0.8, y: 100 }}
             drag
             dragMomentum={false}
-            className="fixed bottom-24 right-6 z-50 w-72 glass-card rounded-3xl p-4 border border-white/10 shadow-2xl cursor-default select-none overflow-hidden"
+            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-6 z-50 w-72 max-w-[calc(100vw-1.5rem)] glass-card rounded-3xl p-4 border border-white/10 shadow-2xl cursor-default select-none overflow-hidden"
           >
             {/* Header / Drag Handle */}
             <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/5 cursor-grab active:cursor-grabbing">

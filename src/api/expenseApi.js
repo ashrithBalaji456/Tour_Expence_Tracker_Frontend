@@ -1,13 +1,28 @@
 import axios from 'axios';
+import { isNative } from '../utils/platform';
+import { storageService } from '../utils/storage';
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
+  // If explicitly provided in environment, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // When running inside native Capacitor (Android/iOS), ALWAYS point to production Render backend
+  if (isNative()) {
+    return 'https://tour-expence-tracker-backend.onrender.com/api';
+  }
+
+  // When running in a web browser on localhost/127.0.0.1, point to local Spring Boot
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:8080/api';
     }
   }
-  return import.meta.env.VITE_API_URL || 'https://tour-expence-tracker-backend.onrender.com/api';
+
+  // Production website default
+  return 'https://tour-expence-tracker-backend.onrender.com/api';
 };
 
 const api = axios.create({
@@ -15,22 +30,44 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30s timeout to accommodate Render cold-starts
 });
 
-// Request interceptor to attach JWT token to all requests
+// Request interceptor to attach JWT token and active group ID
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
+  async (config) => {
+    let token = storageService.getToken();
+    if (!token) {
+      token = await storageService.getTokenAsync();
+    }
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    const activeGroupId = localStorage.getItem('activeGroupId');
+    const activeGroupId = storageService.getActiveGroupId();
     if (activeGroupId) {
       config.headers['X-Trip-Group-Id'] = activeGroupId;
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for token expiry & error normalization
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      const isAuthCall =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/auth/register');
+      if (!isAuthCall) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
+      }
+    }
     return Promise.reject(error);
   }
 );
@@ -109,6 +146,11 @@ export const expenseApi = {
   },
 
   createFund: async (fundData) => {
+    const response = await api.post('/funds', fundData);
+    return response.data;
+  },
+
+  addFund: async (fundData) => {
     const response = await api.post('/funds', fundData);
     return response.data;
   },

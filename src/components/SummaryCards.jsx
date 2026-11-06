@@ -54,7 +54,7 @@ export default function SummaryCards({ summary }) {
         <div className="text-2xl lg:text-3xl font-extrabold text-white mb-2 tracking-tight">
           ₹{totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
         </div>
-        <div className="flex items-center justify-between text-[11px] text-rose-400 font-medium">
+        <div className="flex flex-wrap items-center justify-between text-[11px] text-rose-400 font-medium gap-1">
           <span>Trip: ₹{tripSpent.toLocaleString()} | Upfront: ₹{preTripSpent.toLocaleString()}</span>
           <span className="font-bold text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded">
             {count} Items

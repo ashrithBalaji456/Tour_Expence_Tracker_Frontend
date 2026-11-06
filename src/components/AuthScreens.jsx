@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import { useWarningDialog } from './WarningDialog';
+import { storageService } from '../utils/storage';
+import { nativeService } from '../services/nativeService';
 
 export default function AuthScreens({ onAuthSuccess }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'setupGroup' | 'selectGroup'
@@ -21,10 +23,11 @@ export default function AuthScreens({ onAuthSuccess }) {
   const [authData, setAuthData] = useState(null); // stores token/username temp
   const [availableGroups, setAvailableGroups] = useState([]);
   const { confirm, warningDialog } = useWarningDialog();
-  const currentUsername = (authData?.username || localStorage.getItem('username') || '').trim().toLowerCase();
+  const currentUsername = (authData?.username || storageService.getUsername() || '').trim().toLowerCase();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    nativeService.hideSplashScreen();
+    const token = storageService.getToken();
     if (token) {
       setLoading(true);
       expenseApi.getMyGroups()
@@ -37,8 +40,8 @@ export default function AuthScreens({ onAuthSuccess }) {
           }
         })
         .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('username');
+          storageService.removeToken();
+          storageService.removeItemSync('username');
           setScreen('login');
         })
         .finally(() => {
@@ -115,8 +118,8 @@ export default function AuthScreens({ onAuthSuccess }) {
     try {
       const data = await expenseApi.login(username, password);
       if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('username', data.username);
+        storageService.setToken(data.token);
+        storageService.setUsername(data.username);
         setAuthData(data);
         
         const groups = await expenseApi.getMyGroups();
@@ -185,7 +188,7 @@ export default function AuthScreens({ onAuthSuccess }) {
         ]))
       }));
       const groupData = await expenseApi.createGroup(groupName, activeMembers);
-      localStorage.setItem('activeGroupId', groupData.groupId);
+      storageService.setActiveGroupId(groupData.groupId);
       onAuthSuccess({
         ...authData,
         hasGroup: true,
@@ -532,7 +535,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                           <div
                             key={g.groupId}
                             onClick={() => {
-                              localStorage.setItem('activeGroupId', g.groupId);
+                              storageService.setActiveGroupId(g.groupId);
                               onAuthSuccess(g);
                             }}
                             className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between cursor-pointer group"
@@ -569,7 +572,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                           <button
                             key={g.groupId}
                             onClick={() => {
-                              localStorage.setItem('activeGroupId', g.groupId);
+                              storageService.setActiveGroupId(g.groupId);
                               onAuthSuccess(g);
                             }}
                             className="w-full text-left p-3.5 rounded-2xl bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/20 transition-all hover:scale-[1.01] flex items-center justify-between"
@@ -608,8 +611,8 @@ export default function AuthScreens({ onAuthSuccess }) {
                   <button
                     type="button"
                     onClick={() => {
-                      localStorage.removeItem('token');
-                      localStorage.removeItem('username');
+                      storageService.removeToken();
+                      storageService.removeItemSync('username');
                       setScreen('login');
                     }}
                     className="text-xs text-rose-400 font-bold hover:underline"

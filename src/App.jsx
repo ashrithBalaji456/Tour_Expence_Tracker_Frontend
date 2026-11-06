@@ -11,13 +11,16 @@ import FundHistoryModal from './components/FundHistoryModal';
 import PreTripPlanner from './components/PreTripPlanner';
 import CalculatorWidget from './components/CalculatorWidget';
 import AuthScreens from './components/AuthScreens';
+import NetworkBanner from './components/NetworkBanner';
 import { useWarningDialog } from './components/WarningDialog';
 import { expenseApi } from './api/expenseApi';
+import { storageService } from './utils/storage';
+import { nativeService } from './services/nativeService';
 import { Users, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem('token') && !!localStorage.getItem('activeGroupId')
+    !!storageService.getToken() && !!storageService.getActiveGroupId()
   );
   const [summary, setSummary] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -38,6 +41,7 @@ export default function App() {
   const { confirm, showAlert, warningDialog } = useWarningDialog();
 
   const handleOpenFundHistory = (filter = 'ALL') => {
+    nativeService.hapticLight();
     setFundHistoryFilter(filter);
     setIsFundHistoryOpen(true);
   };
@@ -66,6 +70,7 @@ export default function App() {
       console.error('Failed to load data from backend:', err);
     } finally {
       setLoading(false);
+      nativeService.hideSplashScreen();
     }
   }, [selectedDate, selectedCategory, isAuthenticated]);
 
@@ -75,17 +80,67 @@ export default function App() {
     }
   }, [loadData, isAuthenticated]);
 
+  // Handle expired JWT events
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      storageService.removeToken();
+      storageService.removeActiveGroupId();
+      setIsAuthenticated(false);
+      setSummary(null);
+      setExpenses([]);
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, []);
+
+  // Android Hardware Back Button navigation integration
+  useEffect(() => {
+    const unregister = nativeService.registerBackHandler(() => {
+      if (settlingTransfer) {
+        setSettlingTransfer(null);
+        return true;
+      }
+      if (isFundHistoryOpen) {
+        setIsFundHistoryOpen(false);
+        return true;
+      }
+      if (isFundModalOpen) {
+        setIsFundModalOpen(false);
+        return true;
+      }
+      if (isExpenseModalOpen) {
+        setIsExpenseModalOpen(false);
+        return true;
+      }
+      if (currentView === 'pretrip') {
+        setCurrentView('dashboard');
+        return true;
+      }
+      return false; // let native system minimize app at root
+    });
+
+    return () => unregister();
+  }, [
+    settlingTransfer,
+    isFundHistoryOpen,
+    isFundModalOpen,
+    isExpenseModalOpen,
+    currentView,
+  ]);
+
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('activeGroupId');
+    nativeService.hapticLight();
+    storageService.removeToken();
+    storageService.removeItemSync('username');
+    storageService.removeActiveGroupId();
     setIsAuthenticated(false);
     setSummary(null);
     setExpenses([]);
   };
 
   const handleSwitchTrip = () => {
-    localStorage.removeItem('activeGroupId');
+    nativeService.hapticLight();
+    storageService.removeActiveGroupId();
     setIsAuthenticated(false);
     setSummary(null);
     setExpenses([]);
@@ -102,16 +157,19 @@ export default function App() {
   }
 
   const handleOpenExpenseModal = (expense = null) => {
+    nativeService.hapticLight();
     setExpenseToEdit(expense);
     setIsExpenseModalOpen(true);
   };
 
   const handleDeleteExpense = async (id) => {
+    nativeService.hapticWarning();
     if (await confirm('Are you sure you want to delete this purchase entry?', {
       title: 'Delete purchase entry?',
     })) {
       try {
         await expenseApi.deleteExpense(id);
+        nativeService.hapticLight();
         loadData();
       } catch (err) {
         showAlert(err.response?.data || 'Failed to delete expense.', { title: 'Delete failed' });
@@ -120,6 +178,7 @@ export default function App() {
   };
 
   const handleOpenSettle = (transfer) => {
+    nativeService.hapticLight();
     setSettlingTransfer(transfer);
     setSettleAmountInput(transfer.amount.toString());
   };
@@ -139,6 +198,7 @@ export default function App() {
         expenseDate: new Date().toISOString().split('T')[0],
         notes: `Settle:${settlingTransfer.fromMember}:${settlingTransfer.toMember}`
       });
+      nativeService.hapticSuccess();
       setSettlingTransfer(null);
       loadData();
     } catch (err) {
@@ -149,11 +209,15 @@ export default function App() {
   const isReadOnly = summary?.isReadOnly || summary?.readOnly || false;
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#0B0F19] text-slate-100 safe-area-container max-w-7xl mx-auto">
+      {/* Network connectivity banner */}
+      <NetworkBanner onRetry={loadData} />
+
       {currentView === 'pretrip' ? (
         <PreTripPlanner onBack={() => {
+          nativeService.hapticLight();
           setCurrentView('dashboard');
-          loadData(); // reload dashboard metrics in case members or data sync is needed
+          loadData(); // reload dashboard metrics
         }} />
       ) : (
         <>
@@ -168,9 +232,15 @@ export default function App() {
           <Header
             summary={summary}
             onOpenExpenseModal={() => handleOpenExpenseModal(null)}
-            onOpenFundModal={() => setIsFundModalOpen(true)}
+            onOpenFundModal={() => {
+              nativeService.hapticLight();
+              setIsFundModalOpen(true);
+            }}
             onOpenFundHistory={() => handleOpenFundHistory('ALL')}
-            onOpenPreTrip={() => setCurrentView('pretrip')}
+            onOpenPreTrip={() => {
+              nativeService.hapticLight();
+              setCurrentView('pretrip');
+            }}
             onLogout={handleLogout}
             onSwitchTrip={handleSwitchTrip}
           />

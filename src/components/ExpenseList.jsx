@@ -184,14 +184,14 @@ export default function ExpenseList({
         {/* Filters */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3">
           {/* Search */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search purchases..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="glass-input rounded-xl pl-9 pr-4 py-2 text-xs w-44 md:w-56"
+              className="glass-input rounded-xl pl-9 pr-4 py-2 text-xs w-full sm:w-44 md:w-56"
             />
           </div>
 

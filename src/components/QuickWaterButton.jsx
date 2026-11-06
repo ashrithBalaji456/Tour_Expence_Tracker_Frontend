@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Droplet, Coffee, Car, Cookie, Zap, CheckCircle } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
+import { nativeService } from '../services/nativeService';
 
 export default function QuickWaterButton({ onExpenseAdded }) {
   const [loadingItem, setLoadingItem] = useState(null);
@@ -51,6 +52,7 @@ export default function QuickWaterButton({ onExpenseAdded }) {
   ];
 
   const handleQuickAdd = async (item) => {
+    nativeService.hapticLight();
     setLoadingItem(item.id);
     try {
       await expenseApi.createExpense({
@@ -62,6 +64,8 @@ export default function QuickWaterButton({ onExpenseAdded }) {
         expenseDate: new Date().toISOString().split('T')[0],
         notes: `Instant 1-tap purchase logged during trip`,
       });
+
+      nativeService.hapticSuccess();
 
       // Confetti burst animation
       confetti({

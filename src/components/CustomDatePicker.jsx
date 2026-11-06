@@ -152,7 +152,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "Selec
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 mt-2 left-0 w-72 glass-modal rounded-2xl p-4 shadow-2xl border border-white/15 backdrop-blur-2xl"
+            className="absolute z-50 mt-2 left-0 sm:left-auto sm:right-0 w-72 max-w-[calc(100vw-2rem)] glass-modal rounded-2xl p-4 shadow-2xl border border-white/15 backdrop-blur-2xl"
           >
             {/* Calendar Header: Month/Year & Nav */}
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">

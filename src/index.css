@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 @layer utilities {
+  /* Safe area insets for Android status bar and bottom gesture navigation */
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.75rem);
+  }
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+  }
+  .safe-area-container {
+    padding-top: max(env(safe-area-inset-top, 0px), 1rem);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1.5rem);
+    padding-left: max(env(safe-area-inset-left, 0px), 1rem);
+    padding-right: max(env(safe-area-inset-right, 0px), 1rem);
+  }
+
   .glass-card {
     background: rgba(21, 28, 44, 0.65);
     backdrop-filter: blur(16px);
@@ -153,4 +167,21 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 242, 254, 0.4);
+}
+
+/* Mobile Touch & Layout Optimizations */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Ensure minimum touch target for mobile clickable items */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }

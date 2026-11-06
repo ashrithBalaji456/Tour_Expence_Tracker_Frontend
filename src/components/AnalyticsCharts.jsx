@@ -69,7 +69,7 @@ export default function AnalyticsCharts({ summary, expenses }) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.3 }}
-        className="glass-card rounded-3xl p-6 border border-white/10"
+        className="glass-card rounded-3xl p-6 border border-white/10 min-w-0"
       >
         <div className="flex items-center gap-2 mb-4">
           <PieIcon className="w-5 h-5 text-cyan-400" />
@@ -121,7 +121,7 @@ export default function AnalyticsCharts({ summary, expenses }) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.4 }}
-        className="glass-card rounded-3xl p-6 border border-white/10"
+        className="glass-card rounded-3xl p-6 border border-white/10 min-w-0"
       >
         <div className="flex items-center gap-2 mb-4">
           <BarChart2 className="w-5 h-5 text-violet-400" />

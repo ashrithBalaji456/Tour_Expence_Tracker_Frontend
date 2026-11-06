@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, CheckCircle2, Smartphone, Banknote } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
+import { nativeService } from '../services/nativeService';
 import CustomDatePicker from './CustomDatePicker';
 
 export default function FundModal({ isOpen, onClose, onSaveSuccess }) {
@@ -36,6 +37,7 @@ export default function FundModal({ isOpen, onClose, onSaveSuccess }) {
         amount: parseFloat(formData.amount),
       });
 
+      nativeService.hapticSuccess();
       onSaveSuccess();
       onClose();
       setFormData({

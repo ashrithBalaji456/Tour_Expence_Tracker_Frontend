@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, CheckCircle2, Banknote, Smartphone, CreditCard, HelpCircle } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
+import { nativeService } from '../services/nativeService';
 import CustomDatePicker from './CustomDatePicker';
 
 export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuccess }) {
@@ -104,6 +105,7 @@ export default function ExpenseModal({ isOpen, onClose, expenseToEdit, onSaveSuc
         });
       }
 
+      nativeService.hapticSuccess();
       onSaveSuccess();
       onClose();
     } catch (err) {
