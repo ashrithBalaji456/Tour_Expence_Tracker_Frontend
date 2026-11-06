@@ -11,7 +11,11 @@ import {
   DollarSign,
   AlertCircle,
   HelpCircle,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Sliders,
+  Check
 } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import { nativeService } from '../services/nativeService';
@@ -34,10 +38,31 @@ export default function MemberTimelineModal({
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   });
 
+  // Departure settings
+  const [hasDepartureDate, setHasDepartureDate] = useState(false);
+  const [departureDate, setDepartureDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split('T')[0];
+  });
+  const [departureTime, setDepartureTime] = useState('12:00');
+
+  // History Allocations (House, Car, Groceries, etc.)
+  const [historyItems, setHistoryItems] = useState([]);
+  const [showHistorySection, setShowHistorySection] = useState(false);
+  const [allocations, setAllocations] = useState({}); // key: `${sourceType}_${id}` -> { selected, daysCount, totalDays, amount, title, originalAmount }
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Load member data and trip history items
   useEffect(() => {
+    if (isOpen) {
+      expenseApi.getTripHistoryItems()
+        .then((items) => setHistoryItems(items || []))
+        .catch(() => setHistoryItems([]));
+    }
+
     if (memberToEdit) {
       setName(memberToEdit.name || '');
       setBudgetLimit(String(memberToEdit.budgetLimit || 10000));
@@ -54,6 +79,35 @@ export default function MemberTimelineModal({
         if (parts[0]) setCustomDate(parts[0]);
         if (parts[1]) setCustomTime(parts[1].substring(0, 5));
       }
+
+      if (memberToEdit.effectiveTo) {
+        setHasDepartureDate(true);
+        const parts = memberToEdit.effectiveTo.split('T');
+        if (parts[0]) setDepartureDate(parts[0]);
+        if (parts[1]) setDepartureTime(parts[1].substring(0, 5));
+      } else {
+        setHasDepartureDate(false);
+      }
+
+      // Initialize existing allocations
+      if (memberToEdit.allocations && memberToEdit.allocations.length > 0) {
+        const allocMap = {};
+        memberToEdit.allocations.forEach((a) => {
+          const key = `${a.sourceType}_${a.expenseId}`;
+          allocMap[key] = {
+            selected: true,
+            daysCount: a.daysCount || 2,
+            totalDays: a.totalDays || 7,
+            amount: a.allocatedAmount || 0,
+            title: a.title,
+            originalAmount: a.originalAmount
+          };
+        });
+        setAllocations(allocMap);
+        setShowHistorySection(true);
+      } else {
+        setAllocations({});
+      }
     } else {
       setName('');
       setBudgetLimit('10000');
@@ -61,11 +115,74 @@ export default function MemberTimelineModal({
       const now = new Date();
       setCustomDate(now.toISOString().split('T')[0]);
       setCustomTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+      setHasDepartureDate(false);
+      setAllocations({});
+      setShowHistorySection(false);
     }
     setError('');
   }, [memberToEdit, isOpen]);
 
   if (!isOpen) return null;
+
+  // Toggle inclusion of an expense from history
+  const handleToggleHistoryItem = (item) => {
+    const key = `${item.sourceType}_${item.id}`;
+    setAllocations((prev) => {
+      const existing = prev[key];
+      if (existing && existing.selected) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+
+      // Default prorating calculation: 2 days out of 7 days, divided by approx 6 members
+      const daysCount = 2;
+      const totalDays = 7;
+      const approxShare = Math.round(((item.amount / totalDays) * daysCount) / 6);
+
+      return {
+        ...prev,
+        [key]: {
+          selected: true,
+          daysCount: daysCount,
+          totalDays: totalDays,
+          amount: approxShare > 0 ? approxShare : Math.round(item.amount / 6),
+          title: item.title,
+          originalAmount: item.amount,
+          sourceType: item.sourceType,
+          expenseId: item.id
+        }
+      };
+    });
+  };
+
+  const handleUpdateAllocationDays = (key, item, days) => {
+    const numDays = Math.max(1, parseInt(days) || 1);
+    setAllocations((prev) => {
+      const current = prev[key] || {};
+      const totalDays = current.totalDays || 7;
+      const calculatedShare = Math.round(((item.amount / totalDays) * numDays) / 6);
+      return {
+        ...prev,
+        [key]: {
+          ...current,
+          daysCount: numDays,
+          amount: calculatedShare > 0 ? calculatedShare : current.amount
+        }
+      };
+    });
+  };
+
+  const handleUpdateAllocationAmount = (key, amount) => {
+    const numAmt = Math.max(0, parseFloat(amount) || 0);
+    setAllocations((prev) => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        amount: numAmt
+      }
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,12 +204,40 @@ export default function MemberTimelineModal({
       effectiveFrom = `${datePart}T${timePart}`;
     }
 
+    let effectiveTo = null;
+    if (hasDepartureDate) {
+      const depDatePart = departureDate || new Date().toISOString().split('T')[0];
+      const depTimePart = departureTime ? (departureTime.length === 5 ? `${departureTime}:00` : departureTime) : '12:00:00';
+      effectiveTo = `${depDatePart}T${depTimePart}`;
+    }
+
+    // Prepare allocations payload
+    const allocationsPayload = Object.entries(allocations)
+      .filter(([_, val]) => val && val.selected && val.amount > 0)
+      .map(([key, val]) => {
+        const parts = key.split('_');
+        const sourceType = parts[0];
+        const expenseId = parseInt(parts[1]);
+        return {
+          expenseId: expenseId,
+          sourceType: sourceType,
+          title: val.title,
+          originalAmount: val.originalAmount,
+          allocatedAmount: val.amount,
+          daysCount: val.daysCount,
+          totalDays: val.totalDays,
+          notes: `Shared ${val.daysCount || 0} days`
+        };
+      });
+
     try {
       const payload = {
         name: name.trim(),
         budgetLimit: parseFloat(budgetLimit) || 10000,
         splitMode: splitMode,
-        effectiveFrom: effectiveFrom
+        effectiveFrom: effectiveFrom,
+        effectiveTo: effectiveTo,
+        allocations: allocationsPayload
       };
 
       if (isEditing) {
@@ -143,8 +288,8 @@ export default function MemberTimelineModal({
                 </h3>
                 <p className="text-xs text-slate-400">
                   {isEditing
-                    ? 'Adjust budget or change when this member started participating.'
-                    : 'Invite a friend mid-trip and choose when their expense sharing begins.'}
+                    ? 'Configure stay window and prorate multi-day assets from history.'
+                    : 'Invite a friend mid-trip, set stay duration, and share house/car costs.'}
                 </p>
               </div>
             </div>
@@ -261,10 +406,10 @@ export default function MemberTimelineModal({
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-cyan-400" />
-                      <span className="text-xs font-bold text-white">From Right Now (Current Time)</span>
+                      <span className="text-xs font-bold text-white">From Right Now (Joined Today)</span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      Shares all purchases logged from this moment forward. Past expenses remain strictly with earlier members.
+                      Only splits expenses added after this exact moment. All past bills before now are ₹0.00.
                     </p>
                   </div>
                 </label>
@@ -274,7 +419,7 @@ export default function MemberTimelineModal({
                   onClick={() => setSplitMode('CUSTOM_DATE')}
                   className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${
                     splitMode === 'CUSTOM_DATE'
-                      ? 'bg-purple-500/15 border-purple-500/50 shadow-glow-purple'
+                      ? 'bg-emerald-500/15 border-emerald-500/50 shadow-glow-emerald'
                       : 'bg-slate-950/60 border-white/5 hover:border-white/20'
                   }`}
                 >
@@ -283,87 +428,220 @@ export default function MemberTimelineModal({
                     name="splitMode"
                     checked={splitMode === 'CUSTOM_DATE'}
                     onChange={() => setSplitMode('CUSTOM_DATE')}
-                    className="mt-1 accent-purple-500"
+                    className="mt-1 accent-emerald-500"
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-purple-400" />
-                      <span className="text-xs font-bold text-white">From Specific Day & Time</span>
+                      <Calendar className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white">Custom Specific Date & Time</span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      Specify the exact flight/train arrival date and time when this friend joined.
+                      Explicitly define the starting day and time they arrived at the trip.
                     </p>
                   </div>
                 </label>
               </div>
+
+              {/* Date & Time Picker */}
+              {splitMode === 'CUSTOM_DATE' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-emerald-300 mb-1">
+                        Arrival Date
+                      </label>
+                      <CustomDatePicker
+                        value={customDate}
+                        onChange={(val) => setCustomDate(val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-emerald-300 mb-1">
+                        Arrival Time
+                      </label>
+                      <input
+                        type="time"
+                        value={customTime}
+                        onChange={(e) => setCustomTime(e.target.value)}
+                        className="w-full glass-input rounded-xl px-3 py-2 text-xs font-mono text-emerald-200"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
-            {/* Custom Date & Time Inputs (Shown if CUSTOM_DATE selected) */}
-            {splitMode === 'CUSTOM_DATE' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-purple-500/30"
-              >
-                <div>
-                  <label className="block text-[11px] font-medium text-purple-200 mb-1 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-purple-400" />
-                    Joining Date
-                  </label>
-                  <CustomDatePicker
-                    value={customDate}
-                    onChange={(date) => setCustomDate(date)}
-                    placeholder="Select date..."
-                  />
-                </div>
+            {/* Departure / Leaving Date Section */}
+            <div className="pt-2 border-t border-white/5">
+              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={hasDepartureDate}
+                  onChange={(e) => setHasDepartureDate(e.target.checked)}
+                  className="rounded accent-amber-500"
+                />
+                <span className="text-xs font-bold text-white">
+                  Member is leaving early (Set Departure Date)
+                </span>
+              </label>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-purple-200 mb-1 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-purple-400" />
-                    Joining Time
-                  </label>
-                  <input
-                    type="time"
-                    value={customTime}
-                    onChange={(e) => setCustomTime(e.target.value)}
-                    className="w-full glass-input rounded-xl px-3 py-2 text-xs font-semibold"
-                    required
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Transparency Note */}
-            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div className="text-[11px] leading-relaxed">
-                <strong>Fair & Transparent Splitting:</strong> The app will automatically exclude any bills incurred before this person's join time. This timestamp is fully editable by the host at any point during the trip.
-              </div>
+              {hasDepartureDate && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3"
+                >
+                  <p className="text-[11px] text-slate-300">
+                    Expenses added after this date & time will NOT be charged to this member.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                        Departure Date
+                      </label>
+                      <CustomDatePicker
+                        value={departureDate}
+                        onChange={(val) => setDepartureDate(val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                        Departure Time
+                      </label>
+                      <input
+                        type="time"
+                        value={departureTime}
+                        onChange={(e) => setDepartureTime(e.target.value)}
+                        className="w-full glass-input rounded-xl px-3 py-2 text-xs font-mono text-amber-200"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-3 flex justify-end gap-3 border-t border-white/10">
+            {/* Share Past Expenses from History (House Rent, Car, Groceries) */}
+            <div className="pt-2 border-t border-white/5">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl btn-premium btn-secondary text-xs transition-all"
+                onClick={() => setShowHistorySection(!showHistorySection)}
+                className="w-full py-2.5 px-3.5 rounded-2xl bg-slate-900/80 border border-white/10 hover:border-cyan-500/40 text-xs font-bold text-white flex items-center justify-between transition-all"
               >
-                Cancel
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-cyan-400" />
+                  <span>Share Past Expenses (House, Car, Groceries)</span>
+                  {Object.keys(allocations).length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-cyan-500/20 text-cyan-300 font-extrabold">
+                      {Object.keys(allocations).length} selected
+                    </span>
+                  )}
+                </div>
+                {showHistorySection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
+
+              {showHistorySection && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 space-y-3 p-3.5 rounded-2xl bg-slate-950/70 border border-white/5 max-h-60 overflow-y-auto pr-1"
+                >
+                  <p className="text-[11px] text-slate-400">
+                    Select any past expenses recorded in the trip that this guest should also pay for (prorated by days):
+                  </p>
+
+                  {historyItems.length === 0 ? (
+                    <p className="text-[11px] text-slate-500 italic text-center py-2">
+                      No previous expenses recorded in history yet.
+                    </p>
+                  ) : (
+                    historyItems.map((item) => {
+                      const key = `${item.sourceType}_${item.id}`;
+                      const isSelected = Boolean(allocations[key]?.selected);
+                      const allocData = allocations[key] || {};
+
+                      return (
+                        <div
+                          key={key}
+                          className={`p-3 rounded-xl border transition-all ${
+                            isSelected
+                              ? 'bg-cyan-500/10 border-cyan-500/40'
+                              : 'bg-slate-900/50 border-white/5'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <label className="flex items-start gap-2.5 cursor-pointer flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleHistoryItem(item)}
+                                className="mt-1 accent-cyan-400"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-white truncate">{item.title}</div>
+                                <div className="text-[10px] text-slate-400">
+                                  <span>Total: ₹{item.amount?.toLocaleString()}</span>
+                                  <span> • Payer: {item.paidBy || 'Group'}</span>
+                                </div>
+                              </div>
+                            </label>
+
+                            {isSelected && (
+                              <span className="text-xs font-extrabold text-cyan-300">
+                                ₹{allocData.amount?.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+
+                          {isSelected && (
+                            <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400">Days used:</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="30"
+                                  value={allocData.daysCount || 2}
+                                  onChange={(e) => handleUpdateAllocationDays(key, item, e.target.value)}
+                                  className="w-12 glass-input px-1.5 py-1 text-center font-bold text-white text-xs rounded-lg"
+                                />
+                                <span className="text-[10px] text-slate-500">of 7 days</span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400">Share ₹:</span>
+                                <input
+                                  type="number"
+                                  step="10"
+                                  value={allocData.amount || 0}
+                                  onChange={(e) => handleUpdateAllocationAmount(key, e.target.value)}
+                                  className="w-20 glass-input px-2 py-1 text-right font-extrabold text-cyan-300 text-xs rounded-lg"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </motion.div>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-3">
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl btn-premium btn-cyan text-xs shadow-glow-cyan flex items-center gap-2 transition-all font-bold"
+                className="w-full py-3 rounded-2xl btn-premium btn-violet text-sm font-bold shadow-glow-violet flex items-center justify-center gap-2 transition-all"
               >
-                {loading ? (
-                  <>Saving...</>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    {isEditing ? 'Save Timeline' : 'Add Member'}
-                  </>
-                )}
+                <CheckCircle2 className="w-4 h-4" />
+                {loading ? 'Saving Changes...' : isEditing ? 'Update Member & Split' : 'Add Mid-Trip Member'}
               </button>
             </div>
           </form>
@@ -372,4 +650,3 @@ export default function MemberTimelineModal({
     </AnimatePresence>
   );
 }
-

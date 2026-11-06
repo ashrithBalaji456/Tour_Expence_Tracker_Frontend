@@ -202,4 +202,21 @@ export const expenseApi = {
     const response = await api.get('/pretrip/summary');
     return response.data;
   },
+
+  // Trip History for Onboarding Allocations
+  getTripHistoryItems: async () => {
+    const response = await api.get('/pretrip/history-items');
+    return response.data;
+  },
+
+  // Early Departure Exit Bill & Settlement
+  getMemberExitBill: async (id) => {
+    const response = await api.get(`/pretrip/members/${id}/exit-bill`);
+    return response.data;
+  },
+
+  checkoutMember: async (id) => {
+    const response = await api.post(`/pretrip/members/${id}/checkout`);
+    return response.data;
+  },
 };

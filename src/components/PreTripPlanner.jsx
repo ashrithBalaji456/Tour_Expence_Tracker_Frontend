@@ -18,12 +18,14 @@ import {
   Edit3,
   Clock,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Receipt
 } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import CustomDatePicker from './CustomDatePicker';
 import { useWarningDialog } from './WarningDialog';
 import MemberTimelineModal from './MemberTimelineModal';
+import MemberExitBillModal from './MemberExitBillModal';
 
 const formatMemberJoinTime = (isoStr) => {
   if (!isoStr) return '';
@@ -73,6 +75,7 @@ export default function PreTripPlanner({ onBack }) {
   // UI state
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState(null);
+  const [exitBillMemberId, setExitBillMemberId] = useState(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberBudget, setNewMemberBudget] = useState('10000');
   const [editingMemberId, setEditingMemberId] = useState(null);
@@ -324,6 +327,15 @@ export default function PreTripPlanner({ onBack }) {
                                 From Start
                               </span>
                             )}
+                            {member.isDeparted ? (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Departed
+                              </span>
+                            ) : member.effectiveTo ? (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Leaves {formatMemberJoinTime(member.effectiveTo)}
+                              </span>
+                            ) : null}
                           </div>
                           <p className="text-[10px] text-slate-400 mt-0.5">
                             Budget: <span className="text-violet-300 font-bold">₹{parseFloat(member.budgetLimit).toLocaleString()}</span>
@@ -331,27 +343,36 @@ export default function PreTripPlanner({ onBack }) {
                         </div>
                       </div>
 
-                      {!isReadOnly && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => {
-                              setMemberToEdit(member);
-                              setIsMemberModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-violet-500/20 text-slate-400 hover:text-violet-300 transition-colors"
-                            title="Edit joining date, time, or budget"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMember(member.id)}
-                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
-                            title="Remove member"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => setExitBillMemberId(member.id)}
+                          className="p-1.5 rounded-lg hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 transition-colors"
+                          title="View Exit Bill / Departure Settlement"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                        </button>
+                        {!isReadOnly && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setMemberToEdit(member);
+                                setIsMemberModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-violet-500/20 text-slate-400 hover:text-violet-300 transition-colors"
+                              title="Edit joining date, time, or budget"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(member.id)}
+                              className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors"
+                              title="Remove member"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })
@@ -646,6 +667,14 @@ export default function PreTripPlanner({ onBack }) {
           setMemberToEdit(null);
         }}
         onSuccess={loadPreTripData}
+      />
+
+      <MemberExitBillModal
+        isOpen={Boolean(exitBillMemberId)}
+        memberId={exitBillMemberId}
+        isReadOnly={isReadOnly}
+        onClose={() => setExitBillMemberId(null)}
+        onSettledSuccess={loadPreTripData}
       />
 
       {warningDialog}
