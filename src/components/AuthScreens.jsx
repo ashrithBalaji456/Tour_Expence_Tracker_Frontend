@@ -6,6 +6,17 @@ import { useWarningDialog } from './WarningDialog';
 import { storageService } from '../utils/storage';
 import { nativeService } from '../services/nativeService';
 
+const formatTripDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
 export default function AuthScreens({ onAuthSuccess }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'setupGroup' | 'selectGroup'
   const [username, setUsername] = useState('');
@@ -541,7 +552,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                         👑 Trips you Manage (As Admin):
                       </h4>
                       <div className="space-y-2">
-                        {adminTrips.map((g) => (
+                        {adminTrips.map((g, idx) => (
                           <div
                             key={g.groupId}
                             onClick={() => {
@@ -551,10 +562,31 @@ export default function AuthScreens({ onAuthSuccess }) {
                             className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between cursor-pointer group"
                           >
                             <div>
-                              <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
-                              <p className="text-[9px] text-cyan-300/80 mt-0.5">Full Admin Rights</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
+                                {idx === 0 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/35">
+                                    Latest
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-cyan-300/90 font-semibold">Admin</span>
+                                {g.createdAt && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
+                                  </>
+                                )}
+                                {g.memberCount > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{g.memberCount} members</span>
+                                  </>
+                                )}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2.5 py-1 rounded-lg font-bold border border-cyan-500/35 transition-all group-hover:bg-cyan-500/30">
                                 Enter Dashboard
                               </span>
@@ -578,7 +610,7 @@ export default function AuthScreens({ onAuthSuccess }) {
                         👥 Shared Trips (As Member):
                       </h4>
                       <div className="space-y-2">
-                        {memberTrips.map((g) => (
+                        {memberTrips.map((g, idx) => (
                           <button
                             key={g.groupId}
                             onClick={() => {
@@ -588,10 +620,31 @@ export default function AuthScreens({ onAuthSuccess }) {
                             className="w-full text-left p-3.5 rounded-2xl bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/20 transition-all hover:scale-[1.01] flex items-center justify-between"
                           >
                             <div>
-                              <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
-                              <p className="text-[9px] text-violet-300/80 mt-0.5">Read-Only Access</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
+                                {idx === 0 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/35">
+                                    Latest
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-violet-300/90 font-semibold">Member</span>
+                                {g.createdAt && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
+                                  </>
+                                )}
+                                {g.memberCount > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{g.memberCount} members</span>
+                                  </>
+                                )}
+                              </p>
                             </div>
-                            <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-1 rounded-lg font-bold border border-violet-500/35">
+                            <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-1 rounded-lg font-bold border border-violet-500/35 shrink-0">
                               Open View
                             </span>
                           </button>
