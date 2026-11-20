@@ -224,4 +224,15 @@ export const expenseApi = {
     const response = await api.post(`/pretrip/members/${id}/checkout`);
     return response.data;
   },
+
+  // User Global Analytics & Trip Overview
+  getUserOverview: async () => {
+    const response = await api.get('/dashboard/user-overview');
+    return response.data;
+  },
+
+  updateGroupStatus: async (groupId, status) => {
+    const response = await api.put(`/auth/group/${groupId}/status`, { status });
+    return response.data;
+  },
 };
