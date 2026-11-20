@@ -184,7 +184,11 @@ export default function AuthScreens({ onAuthSuccess }) {
     try {
       setGoogleLoading(true);
       setError('');
-      const data = await expenseApi.googleAuth({ idToken: response.credential });
+      const authPayload = response.credential
+        ? { idToken: response.credential }
+        : { accessToken: response.access_token || response.accessToken };
+
+      const data = await expenseApi.googleAuth(authPayload);
       if (data.token) {
         storageService.setToken(data.token);
         storageService.setUsername(data.username);
@@ -213,8 +217,50 @@ export default function AuthScreens({ onAuthSuccess }) {
       setError('Google Client ID is not configured yet. Please set VITE_GOOGLE_CLIENT_ID in your Frontend/.env file.');
       return;
     }
+    setError('');
+
+    // 1. Explicit OAuth2 token flow (Bypasses FedCM issues, guaranteed account chooser popup on mobile and web)
+    if (window.google?.accounts?.oauth2?.initTokenClient) {
+      try {
+        setGoogleLoading(true);
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          prompt: 'select_account',
+          callback: async (tokenResponse) => {
+            if (tokenResponse?.error) {
+              setGoogleLoading(false);
+              if (tokenResponse.error !== 'access_denied') {
+                setError(`Google Sign-In notice: ${tokenResponse.error_description || tokenResponse.error}`);
+              }
+              return;
+            }
+            if (tokenResponse?.access_token) {
+              await handleGoogleCredentialResponse({ accessToken: tokenResponse.access_token });
+            } else {
+              setGoogleLoading(false);
+            }
+          },
+          error_callback: (err) => {
+            setGoogleLoading(false);
+            console.warn('OAuth2 error:', err);
+          }
+        });
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('Token client init error, falling back:', err);
+        setGoogleLoading(false);
+      }
+    }
+
+    // 2. Fallback to One Tap prompt()
     if (window.google?.accounts?.id) {
-      window.google.accounts.id.prompt();
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed()) {
+          console.warn('Google prompt not displayed:', notification.getNotDisplayedReason());
+        }
+      });
     } else {
       setError('Google Sign-In SDK is still loading. Please check your internet connection.');
     }
@@ -223,6 +269,34 @@ export default function AuthScreens({ onAuthSuccess }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!googleClientId) return;
+    if (showGuide) return; // Wait until onboarding guide is closed
+
+    const renderButtons = () => {
+      try {
+        if (googleBtnLoginRef.current && screen === 'login') {
+          googleBtnLoginRef.current.innerHTML = '';
+          window.google?.accounts?.id?.renderButton(googleBtnLoginRef.current, {
+            theme: 'outline',
+            size: 'large',
+            shape: 'pill',
+            width: 320,
+            text: 'continue_with',
+          });
+        }
+        if (googleBtnSignupRef.current && screen === 'signup') {
+          googleBtnSignupRef.current.innerHTML = '';
+          window.google?.accounts?.id?.renderButton(googleBtnSignupRef.current, {
+            theme: 'outline',
+            size: 'large',
+            shape: 'pill',
+            width: 320,
+            text: 'signup_with',
+          });
+        }
+      } catch (e) {
+        console.warn('[GSI] Button render notice:', e);
+      }
+    };
 
     const initGsi = () => {
       if (window.google?.accounts?.id) {
@@ -232,28 +306,11 @@ export default function AuthScreens({ onAuthSuccess }) {
             callback: handleGoogleCredentialResponse,
             auto_select: false,
           });
-
-          if (googleBtnLoginRef.current && screen === 'login') {
-            window.google.accounts.id.renderButton(googleBtnLoginRef.current, {
-              theme: 'outline',
-              size: 'large',
-              shape: 'pill',
-              width: 320,
-              text: 'continue_with',
-            });
-          }
-          if (googleBtnSignupRef.current && screen === 'signup') {
-            window.google.accounts.id.renderButton(googleBtnSignupRef.current, {
-              theme: 'outline',
-              size: 'large',
-              shape: 'pill',
-              width: 320,
-              text: 'signup_with',
-            });
-          }
         } catch (e) {
           console.warn('[GSI] Initialization notice:', e);
         }
+        // Small delay to ensure DOM refs are attached after transition
+        setTimeout(renderButtons, 100);
       }
     };
 
@@ -265,10 +322,10 @@ export default function AuthScreens({ onAuthSuccess }) {
           clearInterval(timer);
           initGsi();
         }
-      }, 400);
+      }, 300);
       return () => clearInterval(timer);
     }
-  }, [screen, googleClientId]);
+  }, [screen, googleClientId, showGuide]);
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
