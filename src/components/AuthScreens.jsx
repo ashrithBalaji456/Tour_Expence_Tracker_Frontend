@@ -39,8 +39,6 @@ export default function AuthScreens({ onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-  const googleBtnLoginRef = React.useRef(null);
-  const googleBtnSignupRef = React.useRef(null);
 
   // Group creation inputs
   const [groupName, setGroupName] = useState('');
@@ -269,34 +267,6 @@ export default function AuthScreens({ onAuthSuccess }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!googleClientId) return;
-    if (showGuide) return; // Wait until onboarding guide is closed
-
-    const renderButtons = () => {
-      try {
-        if (googleBtnLoginRef.current && screen === 'login') {
-          googleBtnLoginRef.current.innerHTML = '';
-          window.google?.accounts?.id?.renderButton(googleBtnLoginRef.current, {
-            theme: 'outline',
-            size: 'large',
-            shape: 'pill',
-            width: 320,
-            text: 'continue_with',
-          });
-        }
-        if (googleBtnSignupRef.current && screen === 'signup') {
-          googleBtnSignupRef.current.innerHTML = '';
-          window.google?.accounts?.id?.renderButton(googleBtnSignupRef.current, {
-            theme: 'outline',
-            size: 'large',
-            shape: 'pill',
-            width: 320,
-            text: 'signup_with',
-          });
-        }
-      } catch (e) {
-        console.warn('[GSI] Button render notice:', e);
-      }
-    };
 
     const initGsi = () => {
       if (window.google?.accounts?.id) {
@@ -309,8 +279,6 @@ export default function AuthScreens({ onAuthSuccess }) {
         } catch (e) {
           console.warn('[GSI] Initialization notice:', e);
         }
-        // Small delay to ensure DOM refs are attached after transition
-        setTimeout(renderButtons, 100);
       }
     };
 
@@ -325,7 +293,7 @@ export default function AuthScreens({ onAuthSuccess }) {
       }, 300);
       return () => clearInterval(timer);
     }
-  }, [screen, googleClientId, showGuide]);
+  }, [googleClientId]);
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -541,8 +509,7 @@ export default function AuthScreens({ onAuthSuccess }) {
               </div>
 
               {/* Google OAuth Button */}
-              <div className="flex flex-col items-center gap-2">
-                <div ref={googleBtnLoginRef} className="w-full flex justify-center min-h-[40px]" />
+              <div className="w-full">
                 <button
                   type="button"
                   disabled={loading || googleLoading}
@@ -668,8 +635,7 @@ export default function AuthScreens({ onAuthSuccess }) {
               </div>
 
               {/* Google OAuth Button */}
-              <div className="flex flex-col items-center gap-2">
-                <div ref={googleBtnSignupRef} className="w-full flex justify-center min-h-[40px]" />
+              <div className="w-full">
                 <button
                   type="button"
                   disabled={loading || googleLoading}
