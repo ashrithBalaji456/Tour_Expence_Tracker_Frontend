@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { Compass, Sparkles, LogIn, UserPlus, PlusCircle, Trash2, Plus, Eye, EyeOff, HelpCircle, RefreshCw, LogOut, ArrowLeft } from 'lucide-react';
 import { expenseApi } from '../api/expenseApi';
 import { useWarningDialog } from './WarningDialog';
 import { storageService } from '../utils/storage';
@@ -38,6 +38,7 @@ export default function AuthScreens({ onAuthSuccess }) {
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   // Group creation inputs
@@ -49,6 +50,30 @@ export default function AuthScreens({ onAuthSuccess }) {
   const { confirm, warningDialog } = useWarningDialog();
   const currentUsername = (authData?.username || storageService.getUsername() || '').trim().toLowerCase();
 
+  const handleRefreshGroups = async () => {
+    setRefreshing(true);
+    setError('');
+    try {
+      const groups = await expenseApi.getMyGroups();
+      setAvailableGroups(groups || []);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    storageService.removeToken();
+    storageService.removeItemSync('username');
+    storageService.removeActiveGroupId();
+    setAuthData(null);
+    setAvailableGroups([]);
+    setError('');
+    setSuccessMsg('');
+    setScreen('login');
+  };
+
   useEffect(() => {
     nativeService.hideSplashScreen();
     const token = storageService.getToken();
@@ -56,12 +81,8 @@ export default function AuthScreens({ onAuthSuccess }) {
       setLoading(true);
       expenseApi.getMyGroups()
         .then((groups) => {
-          if (groups.length > 0) {
-            setAvailableGroups(groups);
-            setScreen('selectGroup');
-          } else {
-            setScreen('setupGroup');
-          }
+          setAvailableGroups(groups || []);
+          setScreen('selectGroup');
         })
         .catch(() => {
           storageService.removeToken();
@@ -147,12 +168,8 @@ export default function AuthScreens({ onAuthSuccess }) {
         setAuthData(data);
         
         const groups = await expenseApi.getMyGroups();
-        if (groups.length > 0) {
-          setAvailableGroups(groups);
-          setScreen('selectGroup');
-        } else {
-          setScreen('setupGroup');
-        }
+        setAvailableGroups(groups || []);
+        setScreen('selectGroup');
       }
     } catch (err) {
       setError(getErrorMessage(err));
@@ -190,18 +207,11 @@ export default function AuthScreens({ onAuthSuccess }) {
       if (data.token) {
         storageService.setToken(data.token);
         storageService.setUsername(data.username);
+        setAuthData(data);
 
         const groups = await expenseApi.getMyGroups();
-        if (groups && groups.length > 0) {
-          setAvailableGroups(groups);
-          setScreen('selectGroup');
-        } else if (data.hasGroup && data.groupId) {
-          storageService.setActiveGroupId(data.groupId);
-          onAuthSuccess(data);
-        } else {
-          setAuthData(data);
-          setScreen('setupGroup');
-        }
+        setAvailableGroups(groups || []);
+        setScreen('selectGroup');
       }
     } catch (err) {
       setError(getErrorMessage(err) || 'Google authentication failed.');
@@ -432,6 +442,7 @@ export default function AuthScreens({ onAuthSuccess }) {
             {screen === 'login' && 'Sign in to access your shared trip dashboard'}
             {screen === 'signup' && 'Create an account to start tracking trip splits'}
             {screen === 'setupGroup' && 'Almost there! Set up your trip group details'}
+            {screen === 'selectGroup' && 'Your Trip Logs & Shared Dashboards'}
           </p>
         </div>
 
@@ -757,6 +768,26 @@ export default function AuthScreens({ onAuthSuccess }) {
                 <PlusCircle className="w-4 h-4" />
                 {loading ? 'Creating Trip...' : 'Create Trip & Dashboard'}
               </button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setScreen('selectGroup');
+                  }}
+                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 font-semibold transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to My Trips
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" /> Sign Out
+                </button>
+              </div>
             </motion.form>
           )}
 
@@ -770,122 +801,165 @@ export default function AuthScreens({ onAuthSuccess }) {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="space-y-5 text-xs sm:text-sm"
+                className="space-y-4 text-xs sm:text-sm"
               >
-                <div className="text-slate-300 text-xs font-semibold mb-2 text-center">
-                  ✈️ Welcome back! You are part of the following trips:
+                {/* User Bar with Refresh */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-black text-xs uppercase border border-cyan-500/30">
+                      {currentUsername ? currentUsername.charAt(0) : 'U'}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 leading-tight">Signed in as</p>
+                      <p className="font-bold text-white text-xs">@{currentUsername}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshGroups}
+                    disabled={refreshing}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white transition-all flex items-center gap-1 text-[11px] font-bold border border-white/10 disabled:opacity-50"
+                    title="Check for newly added trips"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${refreshing ? 'animate-spin' : ''}`} />
+                    <span>{refreshing ? 'Refreshing...' : 'Refresh Trips'}</span>
+                  </button>
                 </div>
 
-                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
-                  {adminTrips.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-1">
-                        👑 Trips you Manage (As Admin):
-                      </h4>
+                {/* Empty State when no trips exist */}
+                {availableGroups.length === 0 ? (
+                  <div className="text-center py-6 px-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/15 space-y-3">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                      <Compass className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">No Trips Yet</h4>
+                      <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1 leading-relaxed">
+                        You are not currently part of any trip group.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#0E1424] border border-white/5 text-[11px] text-slate-300 space-y-1 text-left">
+                      <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> Getting invited by a friend?
+                      </p>
+                      <p className="text-slate-400">
+                        Ask your friend to add your username: <span className="text-white font-bold bg-white/10 px-1.5 py-0.5 rounded">@{currentUsername}</span> to their trip, then tap <strong>Refresh Trips</strong> above!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                    {adminTrips.length > 0 && (
                       <div className="space-y-2">
-                        {adminTrips.map((g, idx) => (
-                          <div
-                            key={g.groupId}
-                            onClick={() => {
-                              storageService.setActiveGroupId(g.groupId);
-                              onAuthSuccess(g);
-                            }}
-                            className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between cursor-pointer group"
-                          >
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
-                                {idx === 0 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/35">
-                                    Latest
-                                  </span>
-                                )}
+                        <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-1">
+                          👑 Trips you Manage (As Admin):
+                        </h4>
+                        <div className="space-y-2">
+                          {adminTrips.map((g, idx) => (
+                            <div
+                              key={g.groupId}
+                              onClick={() => {
+                                storageService.setActiveGroupId(g.groupId);
+                                onAuthSuccess(g);
+                              }}
+                              className="w-full text-left p-3.5 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all hover:scale-[1.01] flex items-center justify-between cursor-pointer group"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
+                                  {idx === 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/35">
+                                      Latest
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-cyan-300/90 font-semibold">Admin</span>
+                                  {g.createdAt && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
+                                    </>
+                                  )}
+                                  {g.memberCount > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{g.memberCount} members</span>
+                                    </>
+                                  )}
+                                </p>
                               </div>
-                              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                                <span className="text-cyan-300/90 font-semibold">Admin</span>
-                                {g.createdAt && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
-                                  </>
-                                )}
-                                {g.memberCount > 0 && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{g.memberCount} members</span>
-                                  </>
-                                )}
-                              </p>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2.5 py-1 rounded-lg font-bold border border-cyan-500/35 transition-all group-hover:bg-cyan-500/30">
+                                  Enter Dashboard
+                                </span>
+                                <button
+                                  onClick={(e) => handleDeleteGroup(g.groupId, e)}
+                                  className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 hover:text-white transition-all shadow-glow-rose"
+                                  title="Delete Trip Group"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2.5 py-1 rounded-lg font-bold border border-cyan-500/35 transition-all group-hover:bg-cyan-500/30">
-                                Enter Dashboard
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {memberTrips.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[10px] font-bold text-violet-400 uppercase tracking-wider px-1">
+                          👥 Shared Trips (As Member):
+                        </h4>
+                        <div className="space-y-2">
+                          {memberTrips.map((g, idx) => (
+                            <button
+                              key={g.groupId}
+                              onClick={() => {
+                                storageService.setActiveGroupId(g.groupId);
+                                onAuthSuccess(g);
+                              }}
+                              className="w-full text-left p-3.5 rounded-2xl bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/20 transition-all hover:scale-[1.01] flex items-center justify-between"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
+                                  {idx === 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/35">
+                                      Latest
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-violet-300/90 font-semibold">Member</span>
+                                  {g.createdAt && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
+                                    </>
+                                  )}
+                                  {g.memberCount > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{g.memberCount} members</span>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                              <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-1 rounded-lg font-bold border border-violet-500/35 shrink-0">
+                                Open View
                               </span>
-                              <button
-                                onClick={(e) => handleDeleteGroup(g.groupId, e)}
-                                className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 hover:text-white transition-all shadow-glow-rose"
-                                title="Delete Trip Group"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
 
-                  {memberTrips.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-bold text-violet-400 uppercase tracking-wider px-1">
-                        👥 Shared Trips (As Member):
-                      </h4>
-                      <div className="space-y-2">
-                        {memberTrips.map((g, idx) => (
-                          <button
-                            key={g.groupId}
-                            onClick={() => {
-                              storageService.setActiveGroupId(g.groupId);
-                              onAuthSuccess(g);
-                            }}
-                            className="w-full text-left p-3.5 rounded-2xl bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/20 transition-all hover:scale-[1.01] flex items-center justify-between"
-                          >
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h5 className="font-bold text-white text-sm">{g.groupName}</h5>
-                                {idx === 0 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/35">
-                                    Latest
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                                <span className="text-violet-300/90 font-semibold">Member</span>
-                                {g.createdAt && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="text-slate-300">Started {formatTripDate(g.createdAt)}</span>
-                                  </>
-                                )}
-                                {g.memberCount > 0 && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{g.memberCount} members</span>
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                            <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-1 rounded-lg font-bold border border-violet-500/35 shrink-0">
-                              Open View
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-3 border-t border-white/5">
+                {/* Bottom Actions */}
+                <div className="pt-2 border-t border-white/5 space-y-2">
                   <button
                     onClick={() => {
                       setError('');
@@ -897,20 +971,15 @@ export default function AuthScreens({ onAuthSuccess }) {
                     className="w-full py-2.5 rounded-xl btn-premium btn-cyan text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Start a New Trip Group (As Admin)
+                    {availableGroups.length === 0 ? 'Create a New Trip Group (As Admin)' : 'Start Another Trip Group (As Admin)'}
                   </button>
-                </div>
 
-                <div className="text-center pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      storageService.removeToken();
-                      storageService.removeItemSync('username');
-                      setScreen('login');
-                    }}
-                    className="text-xs text-rose-400 font-bold hover:underline"
+                    onClick={handleSignOut}
+                    className="w-full py-2 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 font-bold transition-all flex items-center justify-center gap-1.5"
                   >
+                    <LogOut className="w-3.5 h-3.5" />
                     Sign Out / Use Another Account
                   </button>
                 </div>
