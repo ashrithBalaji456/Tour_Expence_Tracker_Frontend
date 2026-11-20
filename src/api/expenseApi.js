@@ -79,6 +79,11 @@ export const expenseApi = {
     return response.data;
   },
 
+  googleAuth: async ({ idToken, accessToken }) => {
+    const response = await api.post('/auth/google', { idToken, accessToken });
+    return response.data;
+  },
+
   register: async (username, email, password) => {
     const response = await api.post('/auth/register', { username, email, password });
     return response.data;
