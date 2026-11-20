@@ -5,6 +5,8 @@ import { expenseApi } from '../api/expenseApi';
 import { useWarningDialog } from './WarningDialog';
 import { storageService } from '../utils/storage';
 import { nativeService } from '../services/nativeService';
+import { isNative } from '../utils/platform';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 import OnboardingTour from './OnboardingTour';
 import UserAnalyticsDashboard from './UserAnalyticsDashboard';
 
@@ -270,14 +272,65 @@ export default function AuthScreens({ onAuthSuccess }) {
     }
   };
 
-  const handleManualGoogleClick = () => {
+  const handleManualGoogleClick = async () => {
     if (!googleClientId) {
       setError('Google Client ID is not configured yet. Please set VITE_GOOGLE_CLIENT_ID in your Frontend/.env file.');
       return;
     }
     setError('');
 
-    // 1. Explicit OAuth2 token flow (Bypasses FedCM issues, guaranteed account chooser popup on mobile and web)
+    // 1. Native Android flow using Credential Manager (Native Account Chooser Bottom Sheet)
+    if (isNative()) {
+      try {
+        setGoogleLoading(true);
+        await SocialLogin.initialize({
+          google: {
+            webClientId: googleClientId,
+            mode: 'online'
+          }
+        });
+
+        const res = await SocialLogin.login({
+          provider: 'google',
+          options: {
+            scopes: ['email', 'profile']
+          }
+        });
+
+        const result = res?.result;
+        const idToken = result?.idToken;
+        const accessToken = typeof result?.accessToken === 'string'
+          ? result.accessToken
+          : result?.accessToken?.token;
+
+        if (idToken || accessToken) {
+          await handleGoogleCredentialResponse({
+            credential: idToken,
+            accessToken: accessToken
+          });
+          return;
+        } else {
+          throw new Error('No authentication credential received from Google.');
+        }
+      } catch (err) {
+        setGoogleLoading(false);
+        // User closed or dismissed the native bottom sheet
+        if (
+          err?.code === 'USER_CANCELLED' ||
+          err?.message?.toLowerCase().includes('cancel') ||
+          err?.message?.includes('16') ||
+          err?.message?.toLowerCase().includes('user cancelled')
+        ) {
+          console.log('[Native Google Auth] User dismissed account selector.');
+          return;
+        }
+        console.warn('[Native Google Auth Error]:', err);
+        setError(getErrorMessage(err) || 'Google authentication was cancelled or failed.');
+        return;
+      }
+    }
+
+    // 2. Web browser: Explicit OAuth2 token flow (Bypasses FedCM issues, guaranteed account chooser popup)
     if (window.google?.accounts?.oauth2?.initTokenClient) {
       try {
         setGoogleLoading(true);
@@ -312,7 +365,7 @@ export default function AuthScreens({ onAuthSuccess }) {
       }
     }
 
-    // 2. Fallback to One Tap prompt()
+    // 3. Fallback to One Tap prompt() on Web
     if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed()) {
@@ -323,6 +376,17 @@ export default function AuthScreens({ onAuthSuccess }) {
       setError('Google Sign-In SDK is still loading. Please check your internet connection.');
     }
   };
+
+  useEffect(() => {
+    if (isNative() && googleClientId) {
+      SocialLogin.initialize({
+        google: {
+          webClientId: googleClientId,
+          mode: 'online'
+        }
+      }).catch((e) => console.warn('[SocialLogin] Pre-init notice:', e));
+    }
+  }, [googleClientId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
